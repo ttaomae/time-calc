@@ -5,12 +5,22 @@ use rust_decimal::RoundingStrategy;
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal_macros::dec;
 
+/// An amount of elapsed time.
+///
+/// Times are represented as a number of seconds, plus a nanosecond offset. The number of
+/// nanoseconds is always positive, which means that negative numbers are represented as one less
+/// than the whole number of seconds. For example, -1.2 seconds is represented as
+/// -2 seconds - .8 seconds (800,000,000 nanoseconds).
+///
+/// Given this representation, the minimum and maximum times that can be represented are
+/// +/- 2,562,047,788,015,215:30:7.999999999 (2^63 seconds + 999,999,999 nanoseconds).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct Time {
     seconds: i64,
     nanoseconds: u32,
 }
 
+/// A builder for creating new times.
 struct TimeBuilder {
     negative: bool,
     hours: u64,
@@ -20,16 +30,19 @@ struct TimeBuilder {
 }
 
 impl TimeBuilder {
+    /// Sets the sign component to negative.
     fn negative(&mut self) -> &mut TimeBuilder {
         self.negative  = true;
         self
     }
 
+    /// Sets the hours component.
     fn hours(&mut self, hours: u64) -> &mut TimeBuilder {
         self.hours = hours;
         self
     }
 
+    /// Sets the minutes component.
     fn minutes(&mut self, minutes: u8) -> &mut TimeBuilder {
         if minutes > 59 {
             panic!("Time must have between 0 and 59 minutes.");
@@ -38,6 +51,7 @@ impl TimeBuilder {
         self
     }
 
+    /// Sets the seconds component.
     fn seconds(&mut self, seconds: u8) -> &mut TimeBuilder {
         if seconds > 59 {
             panic!("Time must have between 0 and 59 seconds.");
@@ -46,6 +60,7 @@ impl TimeBuilder {
         self
     }
 
+    /// Sets the nanoseconds component.
     fn nanoseconds(&mut self, nanoseconds: u32) -> &mut TimeBuilder {
         if nanoseconds > 999_999_999 {
             panic!("Time must have between 0 and 999,999,999 nanoseconds.");
@@ -54,6 +69,7 @@ impl TimeBuilder {
         self
     }
 
+    /// Returns a new time based on the contents of the builder.
     fn build(&self) -> Time {
         if self.hours > Time::MAX_TIME_HOURS
             || (self.hours == Time::MAX_TIME_HOURS && self.minutes > Time::MAX_TIME_MINUTES)
@@ -101,18 +117,26 @@ impl Time {
         }
     }
 
+    /// Converts a time to `Decimal` representing the number of seconds.
     fn to_decimal(&self) -> Decimal {
         Decimal::new(self.total_seconds(), 0) + Decimal::new(self.nanoseconds_offset() as i64, 9)
     }
 
+    /// Returns the total seconds of the time.
     fn total_seconds(self) -> i64 {
         self.seconds
     }
 
+    /// Returns the nanoseconds offset of the time.
     fn nanoseconds_offset(self) -> u32 {
         self.nanoseconds
     }
 
+    /// Returns a number representing the sign of the time.
+    ///
+    /// * `0` if the time is zero.
+    /// * `1` if the time is positive.
+    /// * `-1` if the time is negative.
     fn signum(self) -> i64 {
         if self.total_seconds() == 0 {
             (self.nanoseconds_offset() as i64).signum()
@@ -122,6 +146,7 @@ impl Time {
         }
     }
 
+    /// Returns the hours component of the time.
     fn hours(self) -> u64 {
         let mut total_seconds = self.total_seconds();
         if total_seconds < 0 {
@@ -131,6 +156,7 @@ impl Time {
         (total_seconds / Time::SECONDS_PER_HOUR as i64).abs() as u64
     }
 
+    /// Returns the minutes component of the time.
     fn minutes(self) -> u8 {
         let mut total_seconds = self.total_seconds();
         if total_seconds < 0  {
@@ -140,6 +166,7 @@ impl Time {
         ((total_seconds % Time::SECONDS_PER_HOUR as i64) / Time::MINUTES_PER_HOUR as i64).abs() as u8
     }
 
+    /// Returns the seconds component of the time.
     fn seconds(self) -> u8 {
         let mut total_seconds = self.total_seconds();
         if total_seconds < 0 {
@@ -149,6 +176,7 @@ impl Time {
         (total_seconds % Time::SECONDS_PER_MINUTE as i64).abs() as u8
     }
 
+    /// Returns the nanoseconds component of the time.
     fn nanoseconds(self) -> u32 {
         if self.total_seconds() < 0 {
             Time::NANOS_PER_SECOND - self.nanoseconds_offset()
