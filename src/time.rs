@@ -208,9 +208,6 @@ impl std::ops::Div for Time {
 impl std::ops::Div<Decimal> for Time {
     type Output = Time;
     fn div(self, other: Decimal) -> Time {
-        dbg!(self.to_decimal());
-        dbg!(other);
-        dbg!(self.to_decimal() / other);
         (self.to_decimal() / other).to_time()
     }
 }
