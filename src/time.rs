@@ -31,30 +31,45 @@ impl TimeBuilder {
     }
 
     fn minutes(&mut self, minutes: u8) -> &mut TimeBuilder {
+        if minutes > 59 {
+            panic!("Time must have between 0 and 59 minutes.");
+        }
         self.minutes = minutes;
         self
     }
 
     fn seconds(&mut self, seconds: u8) -> &mut TimeBuilder {
+        if seconds > 59 {
+            panic!("Time must have between 0 and 59 seconds.");
+        }
         self.seconds = seconds;
         self
     }
 
     fn nanoseconds(&mut self, nanoseconds: u32) -> &mut TimeBuilder {
+        if nanoseconds > 999_999_999 {
+            panic!("Time must have between 0 and 999,999,999 nanoseconds.");
+        }
         self.nanoseconds = nanoseconds;
         self
     }
 
     fn build(&self) -> Time {
+        if self.hours > Time::MAX_TIME_HOURS
+            || (self.hours == Time::MAX_TIME_HOURS && self.minutes > Time::MAX_TIME_MINUTES)
+            || (self.hours == Time::MAX_TIME_HOURS
+                && self.minutes == Time::MAX_TIME_MINUTES
+                && self.seconds > Time::MAX_TIME_SECONDS) {
+            panic!("Time exceeds maximum.");
+        }
+
         let mut seconds = (self.hours as u64 * Time::SECONDS_PER_HOUR as u64
             + self.minutes as u64 * Time::SECONDS_PER_MINUTE as u64
             + self.seconds as u64) as i64;
 
         let mut nanoseconds = self.nanoseconds;
 
-        // Since times are represented as a number of seconds plus a nanosecond offset, negative
-        // numbers must be one less than the whole number of seconds. For example, -1.2 seconds is
-        // represented as -2 seconds + .8 seconds (800,000,000 ns).
+        // Handle negative times as described in the `Time` description.
         // Exclude special case of -0.0s.
         if self.negative && (seconds != 0 || nanoseconds != 0) {
             seconds = -seconds - 1;
@@ -66,6 +81,10 @@ impl TimeBuilder {
 }
 
 impl Time {
+    const MAX_TIME_HOURS: u64 = 2562047788015215;
+    const MAX_TIME_MINUTES: u8 = 30;
+    const MAX_TIME_SECONDS: u8 = 7;
+
     const NANOS_PER_SECOND: u32 = 1_000_000_000;
     const SECONDS_PER_MINUTE: u8 = 60;
     const MINUTES_PER_HOUR: u8 = 60;
@@ -83,29 +102,28 @@ impl Time {
     }
 
     fn to_decimal(&self) -> Decimal {
-        Decimal::new(self.seconds, 0) + Decimal::new(self.nanoseconds as i64, 9)
+        Decimal::new(self.total_seconds(), 0) + Decimal::new(self.nanoseconds_offset() as i64, 9)
     }
 
     fn total_seconds(self) -> i64 {
-        if self.seconds < 0 && self.nanoseconds == Time::NANOS_PER_SECOND {
-            self.seconds + 1
-        }
-        else {
-            self.seconds
-        }
+        self.seconds
+    }
+
+    fn nanoseconds_offset(self) -> u32 {
+        self.nanoseconds
     }
 
     fn signum(self) -> i64 {
-        if self.seconds == 0 {
-            (self.nanoseconds as i64).signum()
+        if self.total_seconds() == 0 {
+            (self.nanoseconds_offset() as i64).signum()
         }
         else {
-            self.seconds.signum()
+            self.total_seconds().signum()
         }
     }
 
     fn hours(self) -> u64 {
-        let mut total_seconds = self.seconds;
+        let mut total_seconds = self.total_seconds();
         if total_seconds < 0 {
             total_seconds += 1;
         }
@@ -114,7 +132,7 @@ impl Time {
     }
 
     fn minutes(self) -> u8 {
-        let mut total_seconds = self.seconds;
+        let mut total_seconds = self.total_seconds();
         if total_seconds < 0  {
             total_seconds += 1;
         }
@@ -123,7 +141,7 @@ impl Time {
     }
 
     fn seconds(self) -> u8 {
-        let mut total_seconds = self.seconds;
+        let mut total_seconds = self.total_seconds();
         if total_seconds < 0 {
             total_seconds += 1;
         }
@@ -132,11 +150,11 @@ impl Time {
     }
 
     fn nanoseconds(self) -> u32 {
-        if self.seconds < 0 {
-            Time::NANOS_PER_SECOND - self.nanoseconds
+        if self.total_seconds() < 0 {
+            Time::NANOS_PER_SECOND - self.nanoseconds_offset()
         }
         else {
-            self.nanoseconds
+            self.nanoseconds_offset()
         }
     }
 }
@@ -272,143 +290,143 @@ mod tests {
     fn test_time_seconds_only() {
         // 00:00:00
         assert_time(Time::builder().build(),
-                    0, 0, 0, 0, 0, 0, "0s");
+            0, 0, 0, 0, 0, 0, 0, "0s");
         assert_time(Time::builder().negative().build(),
-                    0, 0, 0, 0, 0, 0, "0s");
+            0, 0, 0, 0, 0, 0, 0, "0s");
 
         // +/- 00:00:01
         assert_time(Time::builder().seconds(1).build(),
-                    1, 1, 0, 0, 1, 0, "1s");
+            1, 0, 1, 0, 0, 1, 0, "1s");
         assert_time(Time::builder().negative().seconds(1).build(),
-                    -1, -1, 0, 0, 1, 0, "-1s");
+            -2, 1000000000, -1, 0, 0, 1, 0, "-1s");
 
         // +/- 00:01:00
         assert_time(Time::builder().minutes(1).build(),
-                    60, 1, 0, 1, 0, 0, "01:00");
+            60, 0, 1, 0, 1, 0, 0, "01:00");
         assert_time(Time::builder().negative().minutes(1).build(),
-                    -60, -1, 0, 1, 0, 0, "-01:00");
+            -61, 1000000000, -1, 0, 1, 0, 0, "-01:00");
 
         // +/- 01:00:00
         let seconds = 60 * 60;
         assert_time(Time::builder().hours(1).build(),
-                    seconds, 1, 1, 0, 0, 0, "1:00:00");
+            seconds, 0, 1, 1, 0, 0, 0, "1:00:00");
         assert_time(Time::builder().negative().hours(1).build(),
-                    -seconds, -1, 1, 0, 0, 0, "-1:00:00");
+            -seconds - 1, 1000000000, -1, 1, 0, 0, 0, "-1:00:00");
 
         // +/- 00:01:01
         assert_time(Time::builder().minutes(1).seconds(1).build(),
-                    61, 1, 0, 1, 1, 0, "01:01");
+            61, 0, 1, 0, 1, 1, 0, "01:01");
         assert_time(Time::builder().negative().minutes(1).seconds(1).build(),
-                    -61, -1, 0, 1, 1, 0, "-01:01");
+            -62, 1000000000, -1, 0, 1, 1, 0, "-01:01");
 
         // +/- 01:01:01
         let seconds = (60 * 60) + 60 + 1;
         assert_time(Time::builder().hours(1).minutes(1).seconds(1).build(),
-                seconds, 1, 1, 1, 1, 0, "1:01:01");
+             seconds, 0, 1, 1, 1, 1, 0, "1:01:01");
         assert_time(Time::builder().negative().hours(1).minutes(1).seconds(1).build(),
-                    -seconds, -1, 1, 1, 1, 0, "-1:01:01");
+            -seconds - 1, 1000000000, -1, 1, 1, 1, 0, "-1:01:01");
 
         // +/- 00:00:59
         assert_time(Time::builder().seconds(59).build(),
-                    59, 1, 0, 0, 59, 0, "59s");
+            59, 0, 1, 0, 0, 59, 0, "59s");
         assert_time(Time::builder().negative().seconds(59).build(),
-                    -59, -1, 0, 0, 59, 0, "-59s");
+            -60, 1000000000, -1, 0, 0, 59, 0, "-59s");
 
         // +/- 00:59:59
         let seconds = (60 * 60) - 1;
         assert_time(Time::builder().minutes(59).seconds(59).build(),
-                    seconds, 1, 0, 59, 59, 0, "59:59");
+            seconds, 0, 1, 0, 59, 59, 0, "59:59");
         assert_time(Time::builder().negative().minutes(59).seconds(59).build(),
-                    -seconds, -1, 0, 59, 59, 0, "-59:59");
+            -seconds - 1, 1000000000, -1, 0, 59, 59, 0, "-59:59");
     }
 
     #[test]
     fn test_time_nanos_only() {
         // +/- 0.000000001s
         assert_time(Time::builder().nanoseconds(1).build(),
-                    0, 1, 0, 0, 0, 1, "0.000000001s");
+            0, 1, 1, 0, 0, 0, 1, "0.000000001s");
         assert_time(Time::builder().negative().nanoseconds(1).build(),
-                    -1, -1, 0, 0, 0, 1, "-0.000000001s");
+            -1, 999999999, -1, 0, 0, 0, 1, "-0.000000001s");
 
         // +/- 0.999999999s
         assert_time(Time::builder().nanoseconds(999999999).build(),
-                    0, 1, 0, 0, 0, 999999999, "0.999999999s");
+            0, 999999999, 1, 0, 0, 0, 999999999, "0.999999999s");
         assert_time(Time::builder().negative().nanoseconds(999999999).build(),
-                    -1, -1, 0, 0, 0, 999999999, "-0.999999999s");
+            -1, 1, -1, 0, 0, 0, 999999999, "-0.999999999s");
 
         // +/- 0.123456789
         assert_time(Time::builder().nanoseconds(123456789).build(),
-                    0, 1, 0, 0 ,0, 123456789, "0.123456789s");
+            0, 123456789, 1, 0, 0 ,0, 123456789, "0.123456789s");
         assert_time(Time::builder().negative().nanoseconds(123456789).build(),
-                    -1, -1, 0, 0, 0, 123456789, "-0.123456789s");
+            -1, 876543211, -1, 0, 0, 0, 123456789, "-0.123456789s");
 
         // +/- 0.987654321
         assert_time(Time::builder().nanoseconds(987654321).build(),
-                    0, 1, 0, 0, 0, 987654321, "0.987654321s");
+            0, 987654321, 1, 0, 0, 0, 987654321, "0.987654321s");
         assert_time(Time::builder().negative().nanoseconds(987654321).build(),
-                    -1, -1, 0, 0, 0, 987654321, "-0.987654321s");
+            -1, 12345679, -1, 0, 0, 0, 987654321, "-0.987654321s");
 
         // +/- 0.13579
         assert_time(Time::builder().nanoseconds(135790000).build(),
-                    0, 1, 0, 0, 0, 135790000, "0.13579s");
+    0, 135790000, 1, 0, 0, 0, 135790000, "0.13579s");
         assert_time(Time::builder().negative().nanoseconds(135790000).build(),
-                    -1, -1, 0, 0, 0, 135790000, "-0.13579s");
+    -1, 864210000, -1, 0, 0, 0, 135790000, "-0.13579s");
 
         // +/- 0.2468
         assert_time(Time::builder().nanoseconds(246800000).build(),
-                    0, 1, 0, 0, 0, 246800000, "0.2468s");
+    0, 246800000, 1, 0, 0, 0, 246800000, "0.2468s");
         assert_time(Time::builder().negative().nanoseconds(246800000).build(),
-                    -1, -1, 0, 0, 0, 246800000, "-0.2468s");
+    -1, 753200000, -1, 0, 0, 0, 246800000, "-0.2468s");
     }
 
     #[test]
     fn test_time_seconds_and_nanos() {
         // +/- 00:00:01.000000001
         assert_time(Time::builder().seconds(1).nanoseconds(1).build(),
-                    1, 1, 0, 0, 1, 1, "1.000000001s");
+            1, 1, 1, 0, 0, 1, 1, "1.000000001s");
         assert_time(Time::builder().negative().seconds(1).nanoseconds(1).build(),
-                    -2, -1, 0, 0, 1, 1, "-1.000000001s");
+            -2, 999999999, -1, 0, 0, 1, 1, "-1.000000001s");
 
         // +/- 00:01:01.000000001
         assert_time(Time::builder().minutes(1).seconds(1).nanoseconds(1).build(),
-                    61, 1, 0, 1, 1, 1, "01:01.000000001");
+            61, 1, 1, 0, 1, 1, 1, "01:01.000000001");
         assert_time(Time::builder().negative().minutes(1).seconds(1).nanoseconds(1).build(),
-                    -62, -1, 0, 1, 1, 1, "-01:01.000000001");
+            -62, 999999999, -1, 0, 1, 1, 1, "-01:01.000000001");
 
         // +/- 01:01:01.000000001
         let seconds = (60 * 60) + 60 + 1;
         assert_time(Time::builder().hours(1).minutes(1).seconds(1).nanoseconds(1).build(),
-                    seconds, 1, 1, 1, 1, 1, "1:01:01.000000001");
+            seconds, 1, 1, 1, 1, 1, 1, "1:01:01.000000001");
         assert_time(Time::builder().hours(1).negative().minutes(1).seconds(1).nanoseconds(1).build(),
-                    -seconds - 1, -1, 1, 1, 1, 1, "-1:01:01.000000001");
+            -seconds - 1, 999999999, -1, 1, 1, 1, 1, "-1:01:01.000000001");
 
         // +/- 00:00:59.999999999
         assert_time(Time::builder().seconds(59).nanoseconds(999999999).build(),
-                    59, 1, 0, 0, 59, 999999999, "59.999999999s");
+            59, 999999999, 1, 0, 0, 59, 999999999, "59.999999999s");
         assert_time(Time::builder().negative().seconds(59).nanoseconds(999999999).build(),
-                    -60, -1, 0, 0, 59, 999999999, "-59.999999999s");
+            -60, 1, -1, 0, 0, 59, 999999999, "-59.999999999s");
 
         // +/- 00:59:59.999999999
         let seconds = (60 * 60) - 1;
         assert_time(Time::builder().minutes(59).seconds(59).nanoseconds(999999999).build(),
-                    seconds, 1, 0, 59, 59, 999999999, "59:59.999999999");
+            seconds, 999999999, 1, 0, 59, 59, 999999999, "59:59.999999999");
         assert_time(Time::builder().negative().minutes(59).seconds(59).nanoseconds(999999999).build(),
-                    -seconds - 1, -1, 0, 59, 59, 999999999, "-59:59.999999999");
+            -seconds - 1, 1, -1, 0, 59, 59, 999999999, "-59:59.999999999");
 
         // +/- 01:01:01.010101010
         let seconds = (60 * 60) + 60 + 1;
         assert_time(Time::builder().hours(1).minutes(1).seconds(1).nanoseconds(010101010).build(),
-                    seconds, 1, 1, 1, 1, 010101010, "1:01:01.01010101");
+            seconds, 010101010, 1, 1, 1, 1, 010101010, "1:01:01.01010101");
         assert_time(Time::builder().negative().hours(1).minutes(1).seconds(1).nanoseconds(010101010).build(),
-                    -seconds - 1, -1, 1, 1, 1, 010101010, "-1:01:01.01010101");
+            -seconds - 1, 989898990, -1, 1, 1, 1, 010101010, "-1:01:01.01010101");
     }
 
     #[test]
     fn test_time_min_max() {
         assert_time(Time::builder().hours(2562047788015215).minutes(30).seconds(7).nanoseconds(999999999).build(),
-                    std::i64::MAX, 1, 2562047788015215, 30, 7, 999999999, "2562047788015215:30:07.999999999");
+            std::i64::MAX, 999999999, 1, 2562047788015215, 30, 7, 999999999, "2562047788015215:30:07.999999999");
         assert_time(Time::builder().negative().hours(2562047788015215).minutes(30).seconds(7).nanoseconds(999999999).build(),
-                    std::i64::MIN, -1, 2562047788015215, 30, 7, 999999999, "-2562047788015215:30:07.999999999");
+            std::i64::MIN, 1, -1, 2562047788015215, 30, 7, 999999999, "-2562047788015215:30:07.999999999");
     }
 
     #[test]
@@ -911,6 +929,60 @@ mod tests {
         assert_mul(_1h_1m_1s_1ns, dec!(8.8), time(8, 56, 56, 800000009));
     }
 
+    #[test]
+    #[should_panic]
+    fn test_greater_than_max_nanoseconds() {
+        Time::builder().nanoseconds(1000000000);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_greater_than_max_seconds() {
+        Time::builder().seconds(60);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_greater_than_max_minutes() {
+        Time::builder().minutes(60);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_builder_greater_than_max() {
+        Time::builder().hours(2562047788015215).minutes(30).seconds(8).build();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_builder_less_than_min() {
+        Time::builder().negative().hours(2562047788015215).minutes(30).seconds(8).build();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_add_greater_than_max() {
+        time(2562047788015215, 30, 7, 999999999) + time(0, 0, 0, 1);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_sub_less_than_min() {
+        neg_time(2562047788015215, 30, 7, 999999999) - time(0, 0, 0, 1);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_div_greater_than_max() {
+        neg_time(256204778801521, 0, 0, 0) / dec!(-0.01);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_mul_less_than_min() {
+        time(256204778801521, 0, 0, 0) * dec!(-100);
+    }
+
     fn time(hours: u64, minutes: u8, seconds: u8, nanoseconds: u32) -> Time {
         Time::builder().hours(hours).minutes(minutes).seconds(seconds).nanoseconds(nanoseconds).build()
     }
@@ -919,8 +991,11 @@ mod tests {
         Time::builder().negative().hours(hours).minutes(minutes).seconds(seconds).nanoseconds(nanoseconds).build()
     }
 
-    fn assert_time(time: Time, total_seconds: i64, signum: i64, hours: u64, minutes: u8, seconds: u8, nanoseconds: u32, time_string: &str) {
+    fn assert_time(time: Time, total_seconds: i64, nanoseconds_offset: u32,
+                   signum: i64, hours: u64, minutes: u8, seconds: u8, nanoseconds: u32,
+                   time_string: &str) {
         assert_eq!(total_seconds, time.total_seconds());
+        assert_eq!(nanoseconds_offset, time.nanoseconds_offset());
         assert_eq!(signum, time.signum());
         assert_eq!(hours, time.hours());
         assert_eq!(minutes, time.minutes());
