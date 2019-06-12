@@ -1,3 +1,4 @@
+use std::convert::From;
 use std::fmt;
 
 use rust_decimal::Decimal;
@@ -29,73 +30,6 @@ struct TimeBuilder {
     nanoseconds: u32,
 }
 
-impl TimeBuilder {
-    /// Sets the sign component to negative.
-    fn negative(&mut self) -> &mut TimeBuilder {
-        self.negative  = true;
-        self
-    }
-
-    /// Sets the hours component.
-    fn hours(&mut self, hours: u64) -> &mut TimeBuilder {
-        self.hours = hours;
-        self
-    }
-
-    /// Sets the minutes component.
-    fn minutes(&mut self, minutes: u8) -> &mut TimeBuilder {
-        if minutes > 59 {
-            panic!("Time must have between 0 and 59 minutes.");
-        }
-        self.minutes = minutes;
-        self
-    }
-
-    /// Sets the seconds component.
-    fn seconds(&mut self, seconds: u8) -> &mut TimeBuilder {
-        if seconds > 59 {
-            panic!("Time must have between 0 and 59 seconds.");
-        }
-        self.seconds = seconds;
-        self
-    }
-
-    /// Sets the nanoseconds component.
-    fn nanoseconds(&mut self, nanoseconds: u32) -> &mut TimeBuilder {
-        if nanoseconds > 999_999_999 {
-            panic!("Time must have between 0 and 999,999,999 nanoseconds.");
-        }
-        self.nanoseconds = nanoseconds;
-        self
-    }
-
-    /// Returns a new time based on the contents of the builder.
-    fn build(&self) -> Time {
-        if self.hours > Time::MAX_TIME_HOURS
-            || (self.hours == Time::MAX_TIME_HOURS && self.minutes > Time::MAX_TIME_MINUTES)
-            || (self.hours == Time::MAX_TIME_HOURS
-                && self.minutes == Time::MAX_TIME_MINUTES
-                && self.seconds > Time::MAX_TIME_SECONDS) {
-            panic!("Time exceeds maximum.");
-        }
-
-        let mut seconds = (self.hours as u64 * Time::SECONDS_PER_HOUR as u64
-            + self.minutes as u64 * Time::SECONDS_PER_MINUTE as u64
-            + self.seconds as u64) as i64;
-
-        let mut nanoseconds = self.nanoseconds;
-
-        // Handle negative times as described in the `Time` description.
-        // Exclude special case of -0.0s.
-        if self.negative && (seconds != 0 || nanoseconds != 0) {
-            seconds = -seconds - 1;
-            nanoseconds = Time::NANOS_PER_SECOND - nanoseconds;
-        }
-
-        Time { seconds, nanoseconds: nanoseconds as u32 }
-    }
-}
-
 impl Time {
     const MAX_TIME_HOURS: u64 = 2562047788015215;
     const MAX_TIME_MINUTES: u8 = 30;
@@ -115,11 +49,6 @@ impl Time {
             seconds: 0,
             nanoseconds: 0,
         }
-    }
-
-    /// Converts a time to `Decimal` representing the number of seconds.
-    fn to_decimal(&self) -> Decimal {
-        Decimal::new(self.total_seconds(), 0) + Decimal::new(self.nanoseconds_offset() as i64, 9)
     }
 
     /// Returns the total seconds of the time.
@@ -187,6 +116,102 @@ impl Time {
     }
 }
 
+impl TimeBuilder {
+    /// Sets the sign component to negative.
+    fn negative(&mut self) -> &mut TimeBuilder {
+        self.negative  = true;
+        self
+    }
+
+    /// Sets the hours component.
+    fn hours(&mut self, hours: u64) -> &mut TimeBuilder {
+        self.hours = hours;
+        self
+    }
+
+    /// Sets the minutes component.
+    fn minutes(&mut self, minutes: u8) -> &mut TimeBuilder {
+        if minutes > 59 {
+            panic!("Time must have between 0 and 59 minutes.");
+        }
+        self.minutes = minutes;
+        self
+    }
+
+    /// Sets the seconds component.
+    fn seconds(&mut self, seconds: u8) -> &mut TimeBuilder {
+        if seconds > 59 {
+            panic!("Time must have between 0 and 59 seconds.");
+        }
+        self.seconds = seconds;
+        self
+    }
+
+    /// Sets the nanoseconds component.
+    fn nanoseconds(&mut self, nanoseconds: u32) -> &mut TimeBuilder {
+        if nanoseconds > 999_999_999 {
+            panic!("Time must have between 0 and 999,999,999 nanoseconds.");
+        }
+        self.nanoseconds = nanoseconds;
+        self
+    }
+
+    /// Returns a new time based on the contents of the builder.
+    fn build(&self) -> Time {
+        if self.hours > Time::MAX_TIME_HOURS
+            || (self.hours == Time::MAX_TIME_HOURS && self.minutes > Time::MAX_TIME_MINUTES)
+            || (self.hours == Time::MAX_TIME_HOURS
+            && self.minutes == Time::MAX_TIME_MINUTES
+            && self.seconds > Time::MAX_TIME_SECONDS) {
+            panic!("Time exceeds maximum.");
+        }
+
+        let mut seconds = (self.hours as u64 * Time::SECONDS_PER_HOUR as u64
+            + self.minutes as u64 * Time::SECONDS_PER_MINUTE as u64
+            + self.seconds as u64) as i64;
+
+        let mut nanoseconds = self.nanoseconds;
+
+        // Handle negative times as described in the `Time` description.
+        // Exclude special case of -0.0s.
+        if self.negative && (seconds != 0 || nanoseconds != 0) {
+            seconds = -seconds - 1;
+            nanoseconds = Time::NANOS_PER_SECOND - nanoseconds;
+        }
+
+        Time { seconds, nanoseconds: nanoseconds as u32 }
+    }
+}
+
+impl From<Decimal> for Time {
+    fn from(decimal: Decimal) -> Self {
+        let seconds_per_hour = Decimal::new(Time::SECONDS_PER_HOUR as i64, 0);
+        let seconds_per_minute = Decimal::new(Time::SECONDS_PER_MINUTE as i64, 0);
+
+        let mut time_builder = Time::builder();
+        if decimal.is_sign_negative() {
+            time_builder.negative();
+        }
+
+        time_builder.hours((decimal / seconds_per_hour).abs().to_u64().unwrap());
+        time_builder.minutes((decimal % seconds_per_hour / seconds_per_minute).abs().to_u8().unwrap());
+        time_builder.seconds((decimal % seconds_per_minute).abs().to_u8().unwrap());
+
+        // `self` may not have enough decimal places. Multiplying by 1.000000000 should ensure we
+        // have at least nanosecond precision.
+        let mut nanos = (decimal * dec!(1.000000000))
+            // Round to 9 decimal places.
+            .round_dp_with_strategy(9, RoundingStrategy::RoundHalfUp)
+            // Keep only fractional part.
+            .fract();
+        // Convert fractional part to number of nanoseconds.
+        nanos.set_scale(0);
+
+        time_builder.nanoseconds(nanos.abs().to_u32().unwrap());
+        time_builder.build()
+    }
+}
+
 impl fmt::Display for Time {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let hours = self.hours();
@@ -227,11 +252,17 @@ impl fmt::Display for Time {
     }
 }
 
+impl From<Time> for Decimal {
+    fn from(time: Time) -> Self {
+        Decimal::new(time.total_seconds(), 0) + Decimal::new(time.nanoseconds_offset() as i64, 9)
+    }
+}
+
 // time + time
 impl std::ops::Add for Time {
     type Output = Time;
     fn add(self, other: Time) -> Time {
-        (self.to_decimal() + other.to_decimal()).to_time()
+        (Decimal::from(self) + Decimal::from(other)).into()
     }
 }
 
@@ -239,7 +270,7 @@ impl std::ops::Add for Time {
 impl std::ops::Sub for Time {
     type Output = Time;
     fn sub(self, other: Time) -> Self::Output {
-        (self.to_decimal() - other.to_decimal()).to_time()
+        (Decimal::from(self) - Decimal::from(other)).into()
     }
 }
 
@@ -247,7 +278,7 @@ impl std::ops::Sub for Time {
 impl std::ops::Div for Time {
     type Output = Decimal;
     fn div(self, other: Time) -> Decimal {
-        self.to_decimal() / other.to_decimal()
+        Decimal::from(self) / Decimal::from(other)
     }
 }
 
@@ -255,7 +286,7 @@ impl std::ops::Div for Time {
 impl std::ops::Div<Decimal> for Time {
     type Output = Time;
     fn div(self, other: Decimal) -> Time {
-        (self.to_decimal() / other).to_time()
+        (Decimal::from(self) / other).into()
     }
 }
 
@@ -263,7 +294,8 @@ impl std::ops::Div<Decimal> for Time {
 impl std::ops::Mul<Decimal> for Time {
     type Output = Time;
     fn mul(self, other: Decimal) -> Time {
-        (self.to_decimal() * other).to_time()
+        (Decimal::from(self) * other).into()
+
     }
 }
 
@@ -272,39 +304,6 @@ impl std::ops::Mul<Time> for Decimal {
     type Output = Time;
     fn mul(self, other: Time) -> Time {
         other * self
-    }
-}
-
-trait ToTime {
-    fn to_time(&self) -> Time;
-}
-
-impl ToTime for Decimal {
-    fn to_time(&self) -> Time {
-        let seconds_per_hour = Decimal::new(Time::SECONDS_PER_HOUR as i64, 0);
-        let seconds_per_minute = Decimal::new(Time::SECONDS_PER_MINUTE as i64, 0);
-
-        let mut time_builder = Time::builder();
-        if self.is_sign_negative() {
-            time_builder.negative();
-        }
-
-        time_builder.hours((self / seconds_per_hour).abs().to_u64().unwrap());
-        time_builder.minutes((self % seconds_per_hour / seconds_per_minute).abs().to_u8().unwrap());
-        time_builder.seconds((self % seconds_per_minute).abs().to_u8().unwrap());
-
-        // `self` may not have enough decimal places. Multiplying by 1.000000000 should ensure we
-        // have at least nanosecond precision.
-        let mut nanos = (self * dec!(1.000000000))
-            // Round to 9 decimal places.
-            .round_dp_with_strategy(9, RoundingStrategy::RoundHalfUp)
-            // Keep only fractional part.
-            .fract();
-        // Convert fractional part to number of nanoseconds.
-        nanos.set_scale(0);
-
-        time_builder.nanoseconds(nanos.abs().to_u32().unwrap());
-        time_builder.build()
     }
 }
 
