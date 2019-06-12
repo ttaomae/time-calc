@@ -1,9 +1,9 @@
 use std::convert::From;
 use std::fmt;
 
+use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 use rust_decimal::RoundingStrategy;
-use rust_decimal::prelude::ToPrimitive;
 use rust_decimal_macros::dec;
 
 /// An amount of elapsed time.
@@ -69,8 +69,7 @@ impl Time {
     fn signum(self) -> i64 {
         if self.total_seconds() == 0 {
             (self.nanoseconds_offset() as i64).signum()
-        }
-        else {
+        } else {
             self.total_seconds().signum()
         }
     }
@@ -88,11 +87,13 @@ impl Time {
     /// Returns the minutes component of the time.
     fn minutes(self) -> u8 {
         let mut total_seconds = self.total_seconds();
-        if total_seconds < 0  {
+        if total_seconds < 0 {
             total_seconds += 1;
         }
 
-        ((total_seconds % Time::SECONDS_PER_HOUR as i64) / Time::MINUTES_PER_HOUR as i64).abs() as u8
+        // Number of seconds in mm:ss portion of the time.
+        let seconds_in_minutes = total_seconds % Time::SECONDS_PER_HOUR;
+        (seconds_in_minutes / Time::MINUTES_PER_HOUR as i64).abs() as u8
     }
 
     /// Returns the seconds component of the time.
@@ -109,8 +110,7 @@ impl Time {
     fn nanoseconds(self) -> u32 {
         if self.total_seconds() < 0 {
             Time::NANOS_PER_SECOND - self.nanoseconds_offset()
-        }
-        else {
+        } else {
             self.nanoseconds_offset()
         }
     }
@@ -119,7 +119,7 @@ impl Time {
 impl TimeBuilder {
     /// Sets the sign component to negative.
     fn negative(&mut self) -> &mut TimeBuilder {
-        self.negative  = true;
+        self.negative = true;
         self
     }
 
@@ -161,8 +161,9 @@ impl TimeBuilder {
         if self.hours > Time::MAX_TIME_HOURS
             || (self.hours == Time::MAX_TIME_HOURS && self.minutes > Time::MAX_TIME_MINUTES)
             || (self.hours == Time::MAX_TIME_HOURS
-            && self.minutes == Time::MAX_TIME_MINUTES
-            && self.seconds > Time::MAX_TIME_SECONDS) {
+                && self.minutes == Time::MAX_TIME_MINUTES
+                && self.seconds > Time::MAX_TIME_SECONDS)
+        {
             panic!("Time exceeds maximum.");
         }
 
@@ -179,7 +180,10 @@ impl TimeBuilder {
             nanoseconds = Time::NANOS_PER_SECOND - nanoseconds;
         }
 
-        Time { seconds, nanoseconds: nanoseconds as u32 }
+        Time {
+            seconds,
+            nanoseconds: nanoseconds as u32,
+        }
     }
 }
 
@@ -194,7 +198,12 @@ impl From<Decimal> for Time {
         }
 
         time_builder.hours((decimal / seconds_per_hour).abs().to_u64().unwrap());
-        time_builder.minutes((decimal % seconds_per_hour / seconds_per_minute).abs().to_u8().unwrap());
+        time_builder.minutes(
+            (decimal % seconds_per_hour / seconds_per_minute)
+                .abs()
+                .to_u8()
+                .unwrap(),
+        );
         time_builder.seconds((decimal % seconds_per_minute).abs().to_u8().unwrap());
 
         // `self` may not have enough decimal places. Multiplying by 1.000000000 should ensure we
@@ -227,8 +236,7 @@ impl fmt::Display for Time {
         }
         if hours > 0 || minutes > 0 {
             write!(f, "{:02}:{:02}", minutes, seconds);
-        }
-        else {
+        } else {
             write!(f, "{}", seconds);
         }
 
@@ -295,7 +303,6 @@ impl std::ops::Mul<Decimal> for Time {
     type Output = Time;
     fn mul(self, other: Decimal) -> Time {
         (Decimal::from(self) * other).into()
-
     }
 }
 
@@ -308,6 +315,7 @@ impl std::ops::Mul<Time> for Decimal {
 }
 
 #[cfg(test)]
+#[rustfmt::skip]
 mod tests {
     use crate::time::Time;
     use rust_decimal::Decimal;
@@ -472,8 +480,8 @@ mod tests {
         let _2s = time(0, 0, 2, 0);
         let _3s = time(0, 0, 3, 0);
         let _10s = time(0, 0, 10, 0);
-        let _12s = time(0, 0, 12,0);
-        let _34s = time(0, 0, 34,0);
+        let _12s = time(0, 0, 12, 0);
+        let _34s = time(0, 0, 34, 0);
         let _59s = time(0, 0, 59, 0);
 
         // Minutes.
@@ -1011,23 +1019,38 @@ mod tests {
     }
 
     fn time(hours: u64, minutes: u8, seconds: u8, nanoseconds: u32) -> Time {
-        Time::builder().hours(hours).minutes(minutes).seconds(seconds).nanoseconds(nanoseconds).build()
+        Time::builder()
+            .hours(hours)
+            .minutes(minutes)
+            .seconds(seconds)
+            .nanoseconds(nanoseconds)
+            .build()
     }
 
     fn neg_time(hours: u64, minutes: u8, seconds: u8, nanoseconds: u32) -> Time {
-        Time::builder().negative().hours(hours).minutes(minutes).seconds(seconds).nanoseconds(nanoseconds).build()
+        Time::builder()
+            .negative()
+            .hours(hours)
+            .minutes(minutes)
+            .seconds(seconds)
+            .nanoseconds(nanoseconds)
+            .build()
     }
 
-    fn assert_time(time: Time, total_seconds: i64, nanoseconds_offset: u32,
-                   signum: i64, hours: u64, minutes: u8, seconds: u8, nanoseconds: u32,
-                   time_string: &str) {
+    fn assert_time(
+        time: Time, total_seconds: i64, nanoseconds_offset: u32,
+        signum: i64, hours: u64, minutes: u8, seconds: u8, nanoseconds: u32,
+        time_string: &str
+    ) {
         assert_eq!(total_seconds, time.total_seconds());
         assert_eq!(nanoseconds_offset, time.nanoseconds_offset());
+
         assert_eq!(signum, time.signum());
         assert_eq!(hours, time.hours());
         assert_eq!(minutes, time.minutes());
         assert_eq!(seconds, time.seconds());
         assert_eq!(nanoseconds, time.nanoseconds());
+
         assert_eq!(time_string, time.to_string());
     }
 
