@@ -92,7 +92,7 @@ impl Time {
         }
 
         // Number of seconds in mm:ss portion of the time.
-        let seconds_in_minutes = total_seconds % Time::SECONDS_PER_HOUR;
+        let seconds_in_minutes = total_seconds % Time::SECONDS_PER_HOUR as i64;
         (seconds_in_minutes / Time::MINUTES_PER_HOUR as i64).abs() as u8
     }
 
