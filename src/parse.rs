@@ -198,7 +198,35 @@ mod tests {
         );
     }
 
+    #[test]
+    fn scan_unknown_tokens() {
+        assert_panic(|| Lexer::new(" ").scan());
+        assert_panic(|| Lexer::new("!").scan());
+        assert_panic(|| Lexer::new("@").scan());
+        assert_panic(|| Lexer::new("a").scan());
+        assert_panic(|| Lexer::new("bcd").scan());
+        assert_panic(|| Lexer::new("-e").scan());
+        assert_panic(|| Lexer::new("f-").scan());
+        assert_panic(|| Lexer::new(":g").scan());
+        assert_panic(|| Lexer::new("g:").scan());
+        assert_panic(|| Lexer::new(".i").scan());
+        assert_panic(|| Lexer::new("j.").scan());
+        assert_panic(|| Lexer::new("1-2-k").scan());
+        assert_panic(|| Lexer::new("l-3-4").scan());
+        assert_panic(|| Lexer::new("5:6:m").scan());
+        assert_panic(|| Lexer::new("n:7:8").scan());
+        assert_panic(|| Lexer::new("9.0.o").scan());
+        assert_panic(|| Lexer::new("p.1.2").scan());
+        assert_panic(|| Lexer::new("-3qrs4:5tuv6:7wxy8.999").scan());
+        assert_panic(|| Lexer::new("-12:34:56.789z").scan());
+    }
+
     fn assert_scan_tokens(input: &str, tokens: Vec<Token>) {
         assert_eq!(Lexer::new(input).scan(), tokens);
+    }
+
+    fn assert_panic<F: FnOnce() -> R + std::panic::UnwindSafe, R>(f: F) {
+        let result = std::panic::catch_unwind(f);
+        assert!(result.is_err());
     }
 }
