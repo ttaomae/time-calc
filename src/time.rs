@@ -322,7 +322,7 @@ mod tests {
     use rust_decimal_macros::dec;
 
     #[test]
-    fn test_time_seconds_only() {
+    fn time_builder_seconds_only() {
         // 00:00:00
         assert_time(Time::builder().build(),
             0, 0, 0, 0, 0, 0, 0, "0s");
@@ -376,7 +376,7 @@ mod tests {
     }
 
     #[test]
-    fn test_time_nanos_only() {
+    fn time_builder_nanos_only() {
         // +/- 0.000000001s
         assert_time(Time::builder().nanoseconds(1).build(),
             0, 1, 1, 0, 0, 0, 1, "0.000000001s");
@@ -415,7 +415,7 @@ mod tests {
     }
 
     #[test]
-    fn test_time_seconds_and_nanos() {
+    fn time_builder_seconds_and_nanos() {
         // +/- 00:00:01.000000001
         assert_time(Time::builder().seconds(1).nanoseconds(1).build(),
             1, 1, 1, 0, 0, 1, 1, "1.000000001s");
@@ -457,7 +457,7 @@ mod tests {
     }
 
     #[test]
-    fn test_time_min_max() {
+    fn time_builder_min_max() {
         assert_time(Time::builder().hours(2562047788015215).minutes(30).seconds(7).nanoseconds(999999999).build(),
             std::i64::MAX, 999999999, 1, 2562047788015215, 30, 7, 999999999, "2562047788015215:30:07.999999999");
         assert_time(Time::builder().negative().hours(2562047788015215).minutes(30).seconds(7).nanoseconds(999999999).build(),
@@ -465,7 +465,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_sub_positive() {
+    fn add_sub_positive() {
         let zero = time(0, 0, 0, 0);
 
         // Nanoseconds.
@@ -598,7 +598,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_sub_negative() {
+    fn add_sub_negative() {
         let zero = time(0, 0, 0, 0);
 
         // Nanoseconds.
@@ -668,7 +668,7 @@ mod tests {
     }
 
     #[test]
-    fn test_div_time() {
+    fn div_time() {
         let zero = time(0, 0, 0, 0);
 
         // Nanoseconds.
@@ -777,7 +777,7 @@ mod tests {
     }
 
     #[test]
-    fn test_div_num() {
+    fn div_num() {
         let zero = time(0, 0, 0, 0);
         assert_eq!(zero / dec!(1.0), zero);
         assert_eq!(zero / dec!(1.5), zero);
@@ -879,7 +879,7 @@ mod tests {
     }
 
     #[test]
-    fn test_mul() {
+    fn mul() {
         let zero = time(0, 0, 0, 0);
 
         // Nanoseconds.
@@ -966,55 +966,55 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn test_greater_than_max_nanoseconds() {
+    fn greater_than_max_nanoseconds() {
         Time::builder().nanoseconds(1000000000);
     }
 
     #[test]
     #[should_panic]
-    fn test_greater_than_max_seconds() {
+    fn greater_than_max_seconds() {
         Time::builder().seconds(60);
     }
 
     #[test]
     #[should_panic]
-    fn test_greater_than_max_minutes() {
+    fn greater_than_max_minutes() {
         Time::builder().minutes(60);
     }
 
     #[test]
     #[should_panic]
-    fn test_builder_greater_than_max() {
+    fn builder_greater_than_max() {
         Time::builder().hours(2562047788015215).minutes(30).seconds(8).build();
     }
 
     #[test]
     #[should_panic]
-    fn test_builder_less_than_min() {
+    fn builder_less_than_min() {
         Time::builder().negative().hours(2562047788015215).minutes(30).seconds(8).build();
     }
 
     #[test]
     #[should_panic]
-    fn test_add_greater_than_max() {
+    fn add_greater_than_max() {
         time(2562047788015215, 30, 7, 999999999) + time(0, 0, 0, 1);
     }
 
     #[test]
     #[should_panic]
-    fn test_sub_less_than_min() {
+    fn sub_less_than_min() {
         neg_time(2562047788015215, 30, 7, 999999999) - time(0, 0, 0, 1);
     }
 
     #[test]
     #[should_panic]
-    fn test_div_greater_than_max() {
+    fn div_greater_than_max() {
         neg_time(256204778801521, 0, 0, 0) / dec!(-0.01);
     }
 
     #[test]
     #[should_panic]
-    fn test_mul_less_than_min() {
+    fn mul_less_than_min() {
         time(256204778801521, 0, 0, 0) * dec!(-100);
     }
 
