@@ -16,13 +16,13 @@ use rust_decimal_macros::dec;
 /// Given this representation, the minimum and maximum times that can be represented are
 /// +/- 2,562,047,788,015,215:30:7.999999999 (2^63 seconds + 999,999,999 nanoseconds).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-struct Time {
+pub struct Time {
     seconds: i64,
     nanoseconds: u32,
 }
 
 /// A builder for creating new times.
-struct TimeBuilder {
+pub struct TimeBuilder {
     negative: bool,
     hours: u64,
     minutes: u8,
@@ -41,7 +41,7 @@ impl Time {
     const SECONDS_PER_HOUR: u16 = Time::MINUTES_PER_HOUR as u16 * Time::SECONDS_PER_MINUTE as u16;
 
     /// Returns a new time builder.
-    fn builder() -> TimeBuilder {
+    pub fn builder() -> TimeBuilder {
         TimeBuilder {
             negative: false,
             hours: 0,
@@ -118,19 +118,19 @@ impl Time {
 
 impl TimeBuilder {
     /// Sets the sign component to negative.
-    fn negative(&mut self) -> &mut TimeBuilder {
+    pub fn negative(&mut self) -> &mut TimeBuilder {
         self.negative = true;
         self
     }
 
     /// Sets the hours component.
-    fn hours(&mut self, hours: u64) -> &mut TimeBuilder {
+    pub fn hours(&mut self, hours: u64) -> &mut TimeBuilder {
         self.hours = hours;
         self
     }
 
     /// Sets the minutes component.
-    fn minutes(&mut self, minutes: u8) -> &mut TimeBuilder {
+    pub fn minutes(&mut self, minutes: u8) -> &mut TimeBuilder {
         if minutes > 59 {
             panic!("Time must have between 0 and 59 minutes.");
         }
@@ -139,7 +139,7 @@ impl TimeBuilder {
     }
 
     /// Sets the seconds component.
-    fn seconds(&mut self, seconds: u8) -> &mut TimeBuilder {
+    pub fn seconds(&mut self, seconds: u8) -> &mut TimeBuilder {
         if seconds > 59 {
             panic!("Time must have between 0 and 59 seconds.");
         }
@@ -148,7 +148,7 @@ impl TimeBuilder {
     }
 
     /// Sets the nanoseconds component.
-    fn nanoseconds(&mut self, nanoseconds: u32) -> &mut TimeBuilder {
+    pub fn nanoseconds(&mut self, nanoseconds: u32) -> &mut TimeBuilder {
         if nanoseconds > 999_999_999 {
             panic!("Time must have between 0 and 999,999,999 nanoseconds.");
         }
@@ -157,7 +157,7 @@ impl TimeBuilder {
     }
 
     /// Returns a new time based on the contents of the builder.
-    fn build(&self) -> Time {
+    pub fn build(&self) -> Time {
         if self.hours > Time::MAX_TIME_HOURS
             || (self.hours == Time::MAX_TIME_HOURS && self.minutes > Time::MAX_TIME_MINUTES)
             || (self.hours == Time::MAX_TIME_HOURS

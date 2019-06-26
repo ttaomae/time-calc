@@ -1,5 +1,9 @@
+use std::fmt;
 use std::iter::Peekable;
 use std::str::Chars;
+
+use crate::time::Time;
+use crate::time::TimeBuilder;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 enum Token {
@@ -7,6 +11,19 @@ enum Token {
     Number(String),
     Colon,
     FullStop,
+}
+
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        let t = match self {
+            Token::Hyphen => String::from("-"),
+            Token::Number(n) => n.clone(),
+            Token::Colon => String::from(":"),
+            Token::FullStop => String::from("."),
+        };
+
+        write!(f, "{}", t)
+    }
 }
 
 struct Lexer<'a> {
@@ -74,11 +91,97 @@ impl<'a> Lexer<'a> {
     }
 }
 
+struct Parser {
+    tokens: Vec<Token>
+}
+
+impl Parser {
+    fn new(tokens: Vec<Token>) -> Parser {
+        Parser { tokens }
+    }
+
+    fn parse(self) -> Time {
+        let mut time_builder = Time::builder();
+        let mut token_iter = self.tokens.into_iter().peekable();
+
+        // Only consume first token if it is a hyphen, indicating a negative time.
+        if token_iter.peek() == Option::Some(&Token::Hyphen) {
+            token_iter.next();
+            time_builder.negative();
+        }
+
+        match token_iter.next() {
+            Option::Some(Token::Number(n)) => {time_builder.hours(n.parse().unwrap());},
+            Option::Some(t) => panic!("Expected hours, but found {}.", t),
+            Option::None => panic!("Expected hours, but found reached end of time."),
+        }
+        match token_iter.next() {
+            Option::Some(Token::Colon) => (),
+            Option::Some(t) => panic!("Expected :, but found {}.", t),
+            Option::None => panic!("Expected :, but found reached end of time."),
+        }
+
+        match token_iter.next() {
+            Option::Some(Token::Number(n)) => {
+                if n.len() != 2 {
+                    panic!("Expected minutes in 2 digit format.");
+                }
+                time_builder.minutes(n.parse().unwrap());
+            },
+            Option::Some(t) => panic!("Expected minutes, but found {}.", t),
+            Option::None => panic!("Expected minutes, but found reached end of time."),
+        }
+        match token_iter.next() {
+            Option::Some(Token::Colon) => (),
+            Option::Some(t) => panic!("Expected :, but found {}", t),
+            Option::None => panic!("Expected :, but found reached end of time."),
+        }
+
+        match token_iter.next() {
+            Option::Some(Token::Number(n)) => {
+                if n.len() != 2 {
+                    panic!("Expected seconds in 2 digit format.");
+                }
+                time_builder.seconds(n.parse().unwrap());
+            },
+            Option::Some(t) => panic!("Expected seconds, but found {}.", t),
+            Option::None => panic!("Expected seconds, but found reached end of time."),
+        }
+
+        match token_iter.peek() {
+            Option::Some(&Token::FullStop) => {
+                token_iter.next();
+                match token_iter.next() {
+                    Option::Some(Token::Number(mut n)) => {
+                        if n.len() > 9 {
+                            panic!("Fractional seconds part is too large.");
+                        }
+                        while n.len() < 9 {
+                            n.push('0');
+                        }
+
+                        time_builder.nanoseconds(n.parse().unwrap());
+                    },
+                    Option::Some(t) => panic!("Expected nanoseconds, but found {}.", t),
+                    Option::None => panic!("Expected nanoseconds, but found end of time."),
+                }
+            },
+            Option::Some(t) => panic!("Expected nanoseconds or end of time, but found {}.", t),
+            Option::None => (),
+        }
+
+        time_builder.build()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::Lexer;
+    use super::Parser;
     use super::Token;
     use super::Token::*;
+    use crate::time::Time;
+    use std::sync::mpsc::TrySendError::Full;
 
     #[test]
     fn scan_single_token() {
@@ -221,6 +324,80 @@ mod tests {
         assert_panic(|| Lexer::new("-12:34:56.789z").scan());
     }
 
+    #[test]
+    fn parse_time() {
+        // Zero.
+        assert_parse_time("0:00:00", Time::builder().build());
+        assert_parse_time("0:00:00.0", Time::builder().build());
+        assert_parse_time("00:00:00.000000000", Time::builder().build());
+        assert_parse_time("-0:00:00", Time::builder().build());
+        assert_parse_time("-0:00:00.0", Time::builder().build());
+        assert_parse_time("-00:00:00.000000000", Time::builder().build());
+
+        assert_parse_time("0:00:00.000000001", Time::builder().nanoseconds(1).build());
+        assert_parse_time("0:00:00.1", Time::builder().nanoseconds(100000000).build());
+        assert_parse_time("0:00:00.100", Time::builder().nanoseconds(100000000).build());
+        assert_parse_time("0:00:00.987654", Time::builder().nanoseconds(987654000).build());
+        assert_parse_time("0:00:00.999999999", Time::builder().nanoseconds(999999999).build());
+
+        assert_parse_time("0:00:01", Time::builder().seconds(1).build());
+        assert_parse_time("0:00:59", Time::builder().seconds(59).build());
+
+        assert_parse_time("0:01:00", Time::builder().minutes(1).build());
+        assert_parse_time("0:59:00", Time::builder().minutes(59).build());
+
+        assert_parse_time("1:00:00", Time::builder().hours(1).build());
+        assert_parse_time("99:00:00", Time::builder().hours(99).build());
+
+        assert_parse_time("1:01:01", Time::builder().hours(1).minutes(1).seconds(1).build());
+        assert_parse_time("12:34:56", Time::builder().hours(12).minutes(34).seconds(56).build());
+        assert_parse_time("98765:43:21", Time::builder().hours(98765).minutes(43).seconds(21).build());
+        assert_parse_time("19:28:37.465", Time::builder().hours(19).minutes(28).seconds(37).nanoseconds(465000000).build());
+    }
+
+    #[test]
+    fn parse_invalid_time() {
+        // Missing components.
+        assert_panic(|| parse(""));
+        assert_panic(|| parse("12"));
+        assert_panic(|| parse("12:"));
+        assert_panic(|| parse("12:34"));
+        assert_panic(|| parse("12:34:"));
+        assert_panic(|| parse(":34:56"));
+        assert_panic(|| parse("12::56"));
+        assert_panic(|| parse("-12"));
+        assert_panic(|| parse("-12:34"));
+        assert_panic(|| parse("-:34:56"));
+        assert_panic(|| parse("-12::56"));
+
+        // Trailing decimal.
+        assert_panic(|| parse("12:34:56."));
+        // Too many fractional second digits.
+        assert_panic(|| parse("12:34:56.0123456789"));
+
+
+        // Invalid seconds.
+        assert_panic(|| parse("00:00:0"));
+        assert_panic(|| parse("00:00:4"));
+        assert_panic(|| parse("00:00:60"));
+        assert_panic(|| parse("00:00:99"));
+
+        // Invalid minutes.
+        assert_panic(|| parse("00:8:00"));
+        assert_panic(|| parse("00:60:00"));
+        assert_panic(|| parse("00:99:00"));
+
+        // Invalid tokens.
+        assert_panic(|| parse("00.00:00"));
+        assert_panic(|| parse("00:00-00"));
+        assert_panic(|| parse("00:00:00:"));
+        assert_panic(|| parse(":00:00:00"));
+        assert_panic(|| parse(".00:00:00"));
+        assert_panic(|| parse("00:00:00-"));
+        assert_panic(|| parse("00:00:00.."));
+        assert_panic(|| parse("--00:00:00"));
+    }
+
     fn assert_scan_tokens(input: &str, tokens: Vec<Token>) {
         assert_eq!(Lexer::new(input).scan(), tokens);
     }
@@ -228,5 +405,13 @@ mod tests {
     fn assert_panic<F: FnOnce() -> R + std::panic::UnwindSafe, R>(f: F) {
         let result = std::panic::catch_unwind(f);
         assert!(result.is_err());
+    }
+
+    fn assert_parse_time(time_str: &str, time: Time) {
+        assert_eq!(parse(time_str), time);
+    }
+
+    fn parse(time: &str) -> Time {
+        Parser::new(Lexer::new(time).scan()).parse()
     }
 }
