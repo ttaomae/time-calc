@@ -47,7 +47,7 @@ impl<'a> Lexer<'a> {
                 if ch.is_numeric() {
                     self.scan_number();
                 } else {
-                    self.scan_character()
+                    self.scan_character();
                 }
             }
         }
@@ -181,7 +181,6 @@ mod tests {
     use super::Token;
     use super::Token::*;
     use crate::time::Time;
-    use std::sync::mpsc::TrySendError::Full;
 
     #[test]
     fn scan_single_token() {
