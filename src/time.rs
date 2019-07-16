@@ -5,6 +5,9 @@ use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 use rust_decimal::RoundingStrategy;
 use rust_decimal_macros::dec;
+use std::str::FromStr;
+
+use crate::parse::parse_time;
 
 /// An amount of elapsed time.
 ///
@@ -218,6 +221,14 @@ impl From<Decimal> for Time {
 
         time_builder.nanoseconds(nanos.abs().to_u32().unwrap());
         time_builder.build()
+    }
+}
+
+impl FromStr for Time {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Result::Ok(parse_time(s))
     }
 }
 

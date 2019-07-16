@@ -3,7 +3,6 @@ use std::iter::Peekable;
 use std::str::Chars;
 
 use crate::time::Time;
-use crate::time::TimeBuilder;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 enum Token {
@@ -174,12 +173,16 @@ impl Parser {
     }
 }
 
+pub fn parse_time(time: &str) -> Time {
+    Parser::new(Lexer::new(time).scan()).parse()
+}
+
 #[cfg(test)]
 mod tests {
     use super::Lexer;
-    use super::Parser;
     use super::Token;
     use super::Token::*;
+    use super::parse_time;
     use crate::time::Time;
 
     #[test]
@@ -324,7 +327,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_time() {
+    fn parse_time_valid() {
         // Zero.
         assert_parse_time("0:00:00", Time::builder().build());
         assert_parse_time("0:00:00.0", Time::builder().build());
@@ -357,44 +360,44 @@ mod tests {
     #[test]
     fn parse_invalid_time() {
         // Missing components.
-        assert_panic(|| parse(""));
-        assert_panic(|| parse("12"));
-        assert_panic(|| parse("12:"));
-        assert_panic(|| parse("12:34"));
-        assert_panic(|| parse("12:34:"));
-        assert_panic(|| parse(":34:56"));
-        assert_panic(|| parse("12::56"));
-        assert_panic(|| parse("-12"));
-        assert_panic(|| parse("-12:34"));
-        assert_panic(|| parse("-:34:56"));
-        assert_panic(|| parse("-12::56"));
+        assert_panic(|| parse_time(""));
+        assert_panic(|| parse_time("12"));
+        assert_panic(|| parse_time("12:"));
+        assert_panic(|| parse_time("12:34"));
+        assert_panic(|| parse_time("12:34:"));
+        assert_panic(|| parse_time(":34:56"));
+        assert_panic(|| parse_time("12::56"));
+        assert_panic(|| parse_time("-12"));
+        assert_panic(|| parse_time("-12:34"));
+        assert_panic(|| parse_time("-:34:56"));
+        assert_panic(|| parse_time("-12::56"));
 
         // Trailing decimal.
-        assert_panic(|| parse("12:34:56."));
+        assert_panic(|| parse_time("12:34:56."));
         // Too many fractional second digits.
-        assert_panic(|| parse("12:34:56.0123456789"));
+        assert_panic(|| parse_time("12:34:56.0123456789"));
 
 
         // Invalid seconds.
-        assert_panic(|| parse("00:00:0"));
-        assert_panic(|| parse("00:00:4"));
-        assert_panic(|| parse("00:00:60"));
-        assert_panic(|| parse("00:00:99"));
+        assert_panic(|| parse_time("00:00:0"));
+        assert_panic(|| parse_time("00:00:4"));
+        assert_panic(|| parse_time("00:00:60"));
+        assert_panic(|| parse_time("00:00:99"));
 
         // Invalid minutes.
-        assert_panic(|| parse("00:8:00"));
-        assert_panic(|| parse("00:60:00"));
-        assert_panic(|| parse("00:99:00"));
+        assert_panic(|| parse_time("00:8:00"));
+        assert_panic(|| parse_time("00:60:00"));
+        assert_panic(|| parse_time("00:99:00"));
 
         // Invalid tokens.
-        assert_panic(|| parse("00.00:00"));
-        assert_panic(|| parse("00:00-00"));
-        assert_panic(|| parse("00:00:00:"));
-        assert_panic(|| parse(":00:00:00"));
-        assert_panic(|| parse(".00:00:00"));
-        assert_panic(|| parse("00:00:00-"));
-        assert_panic(|| parse("00:00:00.."));
-        assert_panic(|| parse("--00:00:00"));
+        assert_panic(|| parse_time("00.00:00"));
+        assert_panic(|| parse_time("00:00-00"));
+        assert_panic(|| parse_time("00:00:00:"));
+        assert_panic(|| parse_time(":00:00:00"));
+        assert_panic(|| parse_time(".00:00:00"));
+        assert_panic(|| parse_time("00:00:00-"));
+        assert_panic(|| parse_time("00:00:00.."));
+        assert_panic(|| parse_time("--00:00:00"));
     }
 
     fn assert_scan_tokens(input: &str, tokens: Vec<Token>) {
@@ -407,10 +410,6 @@ mod tests {
     }
 
     fn assert_parse_time(time_str: &str, time: Time) {
-        assert_eq!(parse(time_str), time);
-    }
-
-    fn parse(time: &str) -> Time {
-        Parser::new(Lexer::new(time).scan()).parse()
+        assert_eq!(parse_time(time_str), time);
     }
 }
