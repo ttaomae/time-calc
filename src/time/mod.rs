@@ -1,3 +1,5 @@
+mod parse;
+
 use std::convert::From;
 use std::fmt;
 
@@ -7,7 +9,7 @@ use rust_decimal::RoundingStrategy;
 use rust_decimal_macros::dec;
 use std::str::FromStr;
 
-use crate::parse::parse_time;
+use crate::time::parse::parse_time;
 
 /// An amount of elapsed time.
 ///

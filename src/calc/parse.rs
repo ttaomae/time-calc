@@ -272,8 +272,8 @@ mod tests {
     use super::Expr;
     use super::Literal;
     use super::parse_expression;
-    use crate::calc::BinaryOp;
-    use crate::calc::UnaryOp;
+    use crate::calc::parse::BinaryOp;
+    use crate::calc::parse::UnaryOp;
     use crate::time::Time;
     use rust_decimal_macros::dec;
 
