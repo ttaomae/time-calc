@@ -529,7 +529,7 @@ mod tests {
         );
 
         assert_parse_expression(
-            "((-10:10:10 + 0:22:22) * (3.33n / -4.44n)) - (5:00:00 + -0:06:06) / 7.77n",
+            "((-10:10:10 + 0:22:22) * -(3.33n / -4.44n)) - (5:00:00 + -0:06:06) / 7.77n",
             Expr::Binary(
                 Box::new(Expr::Binary(
                     Box::new(Expr::Binary(
@@ -545,12 +545,15 @@ mod tests {
                         )))
                     )),
                     BinaryOp::Multiply,
-                    Box::new(Expr::Binary(
-                        Box::new(Expr::Literal(Literal::Number(dec!(3.33)))),
-                        BinaryOp::Divide,
-                        Box::new(Expr::Unary(
-                            UnaryOp::Negative,
-                            Box::new(Expr::Literal(Literal::Number(dec!(4.44))))
+                    Box::new(Expr::Unary(
+                        UnaryOp::Negative,
+                        Box::new(Expr::Binary(
+                            Box::new(Expr::Literal(Literal::Number(dec!(3.33)))),
+                            BinaryOp::Divide,
+                            Box::new(Expr::Unary(
+                                UnaryOp::Negative,
+                                Box::new(Expr::Literal(Literal::Number(dec!(4.44))))
+                            ))
                         ))
                     ))
                 )),
