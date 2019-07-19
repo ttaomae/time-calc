@@ -121,25 +121,25 @@ impl<'a> Lexer<'a> {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum Expr {
+pub(crate) enum Expr {
     Literal(Literal),
     Binary(Box<Expr>, BinaryOp, Box<Expr>),
     Unary(UnaryOp, Box<Expr>),
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum Literal {
+pub(crate) enum Literal {
     Number(Decimal),
     Time(Time),
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum UnaryOp {
+pub(crate) enum UnaryOp {
     Negative,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum BinaryOp {
+pub(crate) enum BinaryOp {
     Add,
     Subtract,
     Multiply,
@@ -260,7 +260,7 @@ impl<'a> Parser<'a> {
     }
 }
 
-fn parse_expression(expr: &str) -> Expr {
+pub(crate) fn parse_expression(expr: &str) -> Expr {
     Parser::new(&Lexer::new(expr).scan()).parse()
 }
 
