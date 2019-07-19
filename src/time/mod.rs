@@ -219,7 +219,8 @@ impl From<Decimal> for Time {
             // Keep only fractional part.
             .fract();
         // Convert fractional part to number of nanoseconds.
-        nanos.set_scale(0);
+        // Decimal::set_scale(0) should always succeed so ignore result.
+        let _ = nanos.set_scale(0);
 
         time_builder.nanoseconds(nanos.abs().to_u32().unwrap());
         time_builder.build()
@@ -242,15 +243,15 @@ impl fmt::Display for Time {
         let nanoseconds = self.nanoseconds();
 
         if self.total_seconds() < 0 {
-            write!(f, "-");
+            write!(f, "-")?;
         }
         if hours > 0 {
-            write!(f, "{}:", hours);
+            write!(f, "{}:", hours)?;
         }
         if hours > 0 || minutes > 0 {
-            write!(f, "{:02}:{:02}", minutes, seconds);
+            write!(f, "{:02}:{:02}", minutes, seconds)?;
         } else {
-            write!(f, "{}", seconds);
+            write!(f, "{}", seconds)?;
         }
 
         if nanoseconds > 0 {
@@ -264,10 +265,10 @@ impl fmt::Display for Time {
                 }
             }
 
-            write!(f, ".{}", nanos);
+            write!(f, ".{}", nanos)?;
         }
         if hours == 0 && minutes == 0 {
-            write!(f, "s");
+            write!(f, "s")?;
         }
         write!(f, "")
     }
@@ -1008,27 +1009,23 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn add_greater_than_max() {
-        time(2562047788015215, 30, 7, 999999999) + time(0, 0, 0, 1);
+        assert_panic(|| time(2562047788015215, 30, 7, 999999999) + time(0, 0, 0, 1));
     }
 
     #[test]
-    #[should_panic]
     fn sub_less_than_min() {
-        neg_time(2562047788015215, 30, 7, 999999999) - time(0, 0, 0, 1);
+        assert_panic(|| neg_time(2562047788015215, 30, 7, 999999999) - time(0, 0, 0, 1));
     }
 
     #[test]
-    #[should_panic]
     fn div_greater_than_max() {
-        neg_time(256204778801521, 0, 0, 0) / dec!(-0.01);
+        assert_panic(|| neg_time(256204778801521, 0, 0, 0) / dec!(-0.01));
     }
 
     #[test]
-    #[should_panic]
     fn mul_less_than_min() {
-        time(256204778801521, 0, 0, 0) * dec!(-100);
+        assert_panic(|| time(256204778801521, 0, 0, 0) * dec!(-100));
     }
 
     fn time(hours: u64, minutes: u8, seconds: u8, nanoseconds: u32) -> Time {
@@ -1071,5 +1068,10 @@ mod tests {
     fn assert_mul(time: Time, num: Decimal, expected: Time) {
         assert_eq!(time * num, expected);
         assert_eq!(num * time, expected);
+    }
+
+    fn assert_panic<F: FnOnce() -> R + std::panic::UnwindSafe, R>(f: F) {
+        let result = std::panic::catch_unwind(f);
+        assert!(result.is_err());
     }
 }
