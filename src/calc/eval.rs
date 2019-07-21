@@ -1,6 +1,7 @@
 use crate::calc::parse::Expr;
 use crate::calc::parse::Literal;
 use crate::calc::parse::BinaryOp;
+use crate::calc::parse::ParseError;
 use crate::calc::parse::UnaryOp;
 use crate::calc::parse::parse_expression;
 use crate::time::Time;
@@ -42,53 +43,70 @@ impl std::fmt::Display for EvalResult {
 
 struct ExprEvaluator;
 
-impl ExprVisitor for ExprEvaluator {
-    type Result = EvalResult;
+#[derive(Debug)]
+pub(crate) enum EvalError {
+    ParseError(ParseError),
+    MultiplyTimes,
+    AddTimeAndNumber,
+    SubtractTimeAndNumber,
+    DivideNumberByTime,
+}
 
-    fn visit_literal(&self, expr: &Expr) -> EvalResult {
+
+impl std::convert::From<ParseError> for EvalError {
+    fn from(parse_error: ParseError) -> Self {
+        EvalError::ParseError(parse_error)
+    }
+}
+
+impl ExprVisitor for ExprEvaluator {
+    type Result = Result<EvalResult, EvalError>;
+
+    fn visit_literal(&self, expr: &Expr) -> Result<EvalResult, EvalError> {
         match expr {
-            Expr::Literal(Literal::Time(t)) => EvalResult::Time(*t),
-            Expr::Literal(Literal::Number(n)) => EvalResult::Number(*n),
+            Expr::Literal(Literal::Time(t)) => Result::Ok(EvalResult::Time(*t)),
+            Expr::Literal(Literal::Number(n)) => Result::Ok(EvalResult::Number(*n)),
             _ => panic!(),
         }
     }
 
-    fn visit_binary(&self, expr: &Expr) -> EvalResult {
+    fn visit_binary(&self, expr: &Expr) -> Result<EvalResult, EvalError> {
         match expr {
             Expr::Binary(left, op, right) => {
-                let r1 = left.accept(self);
-                let r2 = right.accept(self);
+                let r1 = left.accept(self)?;
+                let r2 = right.accept(self)?;
+
                 match (r1, r2) {
                     (EvalResult::Number(n1), EvalResult::Number(n2)) => {
                         match op {
-                            BinaryOp::Add => EvalResult::Number(n1 + n2),
-                            BinaryOp::Subtract => EvalResult::Number(n1 - n2),
-                            BinaryOp::Multiply => EvalResult::Number(n1 * n2),
-                            BinaryOp::Divide => EvalResult::Number(n1 / n2),
+                            BinaryOp::Add => Result::Ok(EvalResult::Number(n1 + n2)),
+                            BinaryOp::Subtract => Result::Ok(EvalResult::Number(n1 - n2)),
+                            BinaryOp::Multiply => Result::Ok(EvalResult::Number(n1 * n2)),
+                            BinaryOp::Divide => Result::Ok(EvalResult::Number(n1 / n2)),
                         }
                     },
                     (EvalResult::Time(t1), EvalResult::Time(t2)) => {
                         match op {
-                            BinaryOp::Add => EvalResult::Time(t1 + t2),
-                            BinaryOp::Subtract => EvalResult::Time(t1 - t2),
-                            BinaryOp::Divide => EvalResult::Number(t1 / t2),
-                            BinaryOp::Multiply => panic!("Cannot multiply two times."),
+                            BinaryOp::Add => Result::Ok(EvalResult::Time(t1 + t2)),
+                            BinaryOp::Subtract => Result::Ok(EvalResult::Time(t1 - t2)),
+                            BinaryOp::Divide => Result::Ok(EvalResult::Number(t1 / t2)),
+                            BinaryOp::Multiply => Result::Err(EvalError::MultiplyTimes),
                         }
                     }
                     (EvalResult::Time(t), EvalResult::Number(n)) => {
                         match op {
-                            BinaryOp::Multiply => EvalResult::Time(t * n),
-                            BinaryOp::Divide => EvalResult::Time(t / n),
-                            BinaryOp::Add => panic!("Cannot add time and number."),
-                            BinaryOp::Subtract => panic!("Cannot subtract time and number."),
+                            BinaryOp::Multiply => Result::Ok(EvalResult::Time(t * n)),
+                            BinaryOp::Divide => Result::Ok(EvalResult::Time(t / n)),
+                            BinaryOp::Add => Result::Err(EvalError::AddTimeAndNumber),
+                            BinaryOp::Subtract => Result::Err(EvalError::SubtractTimeAndNumber),
                         }
                     },
                     (EvalResult::Number(n), EvalResult::Time(t)) => {
                         match op {
-                            BinaryOp::Multiply => EvalResult::Time(n * t),
-                            BinaryOp::Add => panic!("Cannot add number and time."),
-                            BinaryOp::Subtract => panic!("Cannot subtract number and time."),
-                            BinaryOp::Divide => panic!("Cannot divide number by time."),
+                            BinaryOp::Multiply => Result::Ok(EvalResult::Time(n * t)),
+                            BinaryOp::Add => Result::Err(EvalError::AddTimeAndNumber),
+                            BinaryOp::Subtract => Result::Err(EvalError::SubtractTimeAndNumber),
+                            BinaryOp::Divide => Result::Err(EvalError::DivideNumberByTime),
                         }
                     },
                 }
@@ -97,13 +115,13 @@ impl ExprVisitor for ExprEvaluator {
         }
     }
 
-    fn visit_unary(&self, expr: &Expr) -> EvalResult {
+    fn visit_unary(&self, expr: &Expr) -> Result<EvalResult, EvalError> {
         match expr {
             Expr::Unary(UnaryOp::Negative, operand_expr) => {
-                let operand = operand_expr.accept(self);
+                let operand = operand_expr.accept(self)?;
                 match operand {
-                    EvalResult::Time(t) => EvalResult::Time(t * dec!(-1)),
-                    EvalResult::Number(n) => EvalResult::Number(n * dec!(-1)),
+                    EvalResult::Time(t) => Result::Ok(EvalResult::Time(t * dec!(-1))),
+                    EvalResult::Number(n) => Result::Ok(EvalResult::Number(n * dec!(-1))),
                 }
             },
             _ => panic!(),
@@ -111,8 +129,8 @@ impl ExprVisitor for ExprEvaluator {
     }
 }
 
-pub(in crate) fn eval(expression: &str) -> EvalResult {
-    parse_expression(expression).accept(&ExprEvaluator)
+pub(in crate) fn eval(expression: &str) -> Result<EvalResult, EvalError> {
+    parse_expression(expression)?.accept(&ExprEvaluator)
 }
 
 #[cfg(test)]
@@ -186,20 +204,15 @@ mod tests {
 
     #[test]
     fn eval_invalid() {
-        assert_panic(|| eval("1n + 0:00:02"));
-        assert_panic(|| eval("0:00:30 + 4n"));
-        assert_panic(|| eval("5n - 0:06:00"));
-        assert_panic(|| eval("7:00:00 - 8n"));
-        assert_panic(|| eval("9:09:09 * 10:10:10"));
-        assert_panic(|| eval("11n / 12:12:12"));
+        assert!(eval("1n + 0:00:02").is_err());
+        assert!(eval("0:00:30 + 4n").is_err());
+        assert!(eval("5n - 0:06:00").is_err());
+        assert!(eval("7:00:00 - 8n").is_err());
+        assert!(eval("9:09:09 * 10:10:10").is_err());
+        assert!(eval("11n / 12:12:12").is_err());
     }
 
     fn assert_eval(expr: &str, result: EvalResult) {
-        assert_eq!(eval(expr), result)
-    }
-
-    fn assert_panic<F: FnOnce() -> R + std::panic::UnwindSafe, R>(f: F) {
-        let result = std::panic::catch_unwind(f);
-        assert!(result.is_err());
+        assert_eq!(eval(expr).unwrap(), result)
     }
 }

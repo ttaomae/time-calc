@@ -10,6 +10,7 @@ use rust_decimal_macros::dec;
 use std::str::FromStr;
 
 use crate::time::parse::parse_time;
+use crate::time::parse::ParseError;
 
 /// An amount of elapsed time.
 ///
@@ -228,11 +229,12 @@ impl From<Decimal> for Time {
 }
 
 impl FromStr for Time {
-    type Err = ();
+    type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Result::Ok(parse_time(s))
+        parse_time(s)
     }
+
 }
 
 impl fmt::Display for Time {

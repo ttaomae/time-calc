@@ -8,5 +8,8 @@ use crate::calc::eval::eval;
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    println!("{}", eval(&args[1..].join(" ")));
+    match eval(&args[1..].join(" ")) {
+        Result::Ok(result) => println!("{}", result),
+        Result::Err(error) => println!("{:?}", error),
+    }
 }

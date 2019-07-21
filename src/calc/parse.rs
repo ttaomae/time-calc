@@ -2,6 +2,7 @@ use std::fmt::Error;
 use std::fmt::Formatter;
 use std::iter::Peekable;
 use std::slice::Iter;
+use std::result::Result;
 use std::str::Chars;
 use std::str::FromStr;
 
@@ -10,7 +11,7 @@ use rust_decimal::Decimal;
 use crate::time::Time;
 
 #[derive(Clone, PartialEq, Eq)]
-enum Token {
+pub(crate) enum Token {
     Time(String),
     Number(String),
     Plus,
@@ -48,6 +49,12 @@ struct Lexer<'a> {
     scan_complete: bool
 }
 
+#[derive(Debug)]
+pub(crate) enum LexError {
+    UnexpectedCharacter(char),
+    EndOfInput,
+}
+
 impl<'a> Lexer<'a> {
     fn new(input: &str) -> Lexer {
         Lexer {
@@ -57,23 +64,32 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn scan(&mut self) -> Vec<Token> {
+    fn scan(&mut self) -> Result<Vec<Token>, Vec<LexError>> {
+        let mut errors = Vec::new();
         if !self.scan_complete {
             while let Some(ch) = self.peek() {
                 if ch.is_numeric() {
-                    self.scan_number();
+                    if let Result::Err(e) = self.scan_number() {
+                        errors.push(e);
+                    }
                 }
                 else {
-                    self.scan_character();
+                    if let Result::Err(e) = self.scan_character() {
+                        errors.push(e)
+                    }
                 }
             }
         }
 
         self.scan_complete = true;
-        self.tokens.clone()
+        if errors.is_empty() {
+            Result::Ok(self.tokens.clone())
+        } else {
+            Result::Err(errors)
+        }
     }
 
-    fn scan_number(&mut self) {
+    fn scan_number(&mut self) -> Result<(), LexError> {
         let mut num = String::new();
         loop {
             match self.peek() {
@@ -92,23 +108,26 @@ impl<'a> Lexer<'a> {
         else {
             self.tokens.push(Token::Time(num));
         }
+
+        Result::Ok(())
     }
 
-    fn scan_character(&mut self) {
+    fn scan_character(&mut self) -> Result<(), LexError> {
         let token = match self.next() {
             // Skip whitespace.
-            Option::Some(c) if c.is_whitespace() => return,
+            Option::Some(c) if c.is_whitespace() => return Result::Ok(()),
             Option::Some('+') => Token::Plus,
             Option::Some('-') => Token::Hyphen,
             Option::Some('/') => Token::Slash,
             Option::Some('*') => Token::Asterisk,
             Option::Some('(') => Token::LeftParen,
             Option::Some(')') => Token::RightParen,
-            Option::Some(c) => panic!("Unexpected character: {}", c),
-            Option::None => panic!("Unexpected end of input."),
+            Option::Some(c) => return Result::Err(LexError::UnexpectedCharacter(c)),
+            Option::None => return Result::Err(LexError::EndOfInput),
         };
 
         self.tokens.push(token);
+        Result::Ok(())
     }
 
     fn peek(&mut self) -> Option<&char> {
@@ -150,6 +169,20 @@ struct Parser<'a>{
     tokens: Peekable<Iter<'a, Token>>,
 }
 
+#[derive(Debug)]
+pub(crate) enum ParseError {
+    LexError(Vec<LexError>),
+    LeftoverTokens(Vec<Token>),
+    ExpectedRightParen(Option<Token>),
+    ExpectedLiteral(Option<Token>),
+}
+
+impl std::convert::From<Vec<LexError>> for ParseError {
+    fn from(lex_error: Vec<LexError>) -> Self {
+        ParseError::LexError(lex_error)
+    }
+}
+
 impl<'a> Parser<'a> {
     fn new(tokens: &'a Vec<Token>) -> Parser<'a> {
         Parser {
@@ -157,87 +190,86 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse(&mut self) -> Expr {
+    fn parse(&mut self) -> Result<Expr, ParseError> {
         let expr = self.expression();
         if self.peek().is_some() {
-            panic!("Reached end of expression but found leftover tokens: {:?}",
-                   self.remaining_tokens());
+            return Result::Err(ParseError::LeftoverTokens(self.remaining_tokens()))
         }
 
         expr
     }
 
-    fn expression(&mut self) -> Expr {
+    fn expression(&mut self) -> Result<Expr, ParseError> {
         self.addition()
     }
 
-    fn addition(&mut self) -> Expr {
-        let mut expr = self.multiplication();
+    fn addition(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.multiplication()?;
         while let Option::Some(token) = self.peek() {
             if token == &&Token::Plus {
                 self.next(); // Consume plus
-                expr = Expr::Binary(Box::new(expr), BinaryOp::Add, Box::new(self.multiplication()));
+                expr = Expr::Binary(Box::new(expr), BinaryOp::Add, Box::new(self.multiplication()?));
             }
             else if token == &&Token::Hyphen {
                 self.next(); // Consume hyphen.
-                expr = Expr::Binary(Box::new(expr), BinaryOp::Subtract, Box::new(self.multiplication()));
+                expr = Expr::Binary(Box::new(expr), BinaryOp::Subtract, Box::new(self.multiplication()?));
             }
             else {
                 break;
             }
         }
-        expr
+        Result::Ok(expr)
     }
 
-    fn multiplication(&mut self) -> Expr {
-        let mut expr = self.unary();
+    fn multiplication(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.unary()?;
         while let Option::Some(token) = self.peek() {
             if token == &&Token::Asterisk {
                 self.next(); // Consume asterisk.
-                expr = Expr::Binary(Box::new(expr), BinaryOp::Multiply, Box::new(self.unary()));
+                expr = Expr::Binary(Box::new(expr), BinaryOp::Multiply, Box::new(self.unary()?));
             }
             else if token == &&Token::Slash  {
                 self.next(); // Consume slash.
-                expr = Expr::Binary(Box::new(expr), BinaryOp::Divide, Box::new(self.unary()));
+                expr = Expr::Binary(Box::new(expr), BinaryOp::Divide, Box::new(self.unary()?));
             }
             else {
                 break;
             }
         }
-        expr
+        Result::Ok(expr)
     }
 
-    fn unary(&mut self) -> Expr {
+    fn unary(&mut self) -> Result<Expr, ParseError> {
         if self.peek() == Option::Some(&&Token::Hyphen) {
             self.next(); // Consume hyphen.
-            Expr::Unary(UnaryOp::Negative, Box::new(self.value()))
+            Result::Ok(Expr::Unary(UnaryOp::Negative, Box::new(self.value()?)))
         }
         else {
             self.value()
         }
     }
 
-    fn value(&mut self) -> Expr {
+    fn value(&mut self) -> Result<Expr, ParseError> {
         match self.next() {
             Option::Some(Token::Number(n)) => {
                 let num = Decimal::from_str(n).unwrap();
-                Expr::Literal(Literal::Number(num))
+                Result::Ok(Expr::Literal(Literal::Number(num)))
             },
             Option::Some(Token::Time(t)) => {
                 let time = Time::from_str(t).unwrap();
-                Expr::Literal(Literal::Time(time))
+                Result::Ok(Expr::Literal(Literal::Time(time)))
             },
             Option::Some(Token::LeftParen) => {
                 let expr = self.expression();
                 match self.next() {
                     Option::Some(Token::RightParen) => (),
-                    Option::Some(t) => panic!("Expected ), but found {}.", t),
-                    Option::None => panic!("Expected ), but found nothing."),
+                    Option::Some(t) => return Result::Err(ParseError::ExpectedRightParen(Option::Some(t.clone()))),
+                    Option::None => return Result::Err(ParseError::ExpectedRightParen(Option::None)),
                 }
                 expr
             }
-            Option::Some(token) => panic!("Expected literal, but found {}.", token),
-            Option::None => panic!("Expected literal, but found nothing."),
+            Option::Some(token) => Result::Err(ParseError::ExpectedLiteral(Option::Some(token.clone()))),
+            Option::None => Result::Err(ParseError::ExpectedLiteral(Option::None)),
         }
     }
 
@@ -249,19 +281,19 @@ impl<'a> Parser<'a> {
         self.tokens.next()
     }
 
-    fn remaining_tokens(&mut self) -> Vec<&Token> {
+    fn remaining_tokens(&mut self) -> Vec<Token> {
         let mut result = Vec::new();
 
         while let Option::Some(t) = self.tokens.next() {
-            result.push(t);
+            result.push(t.clone());
         }
 
         result
     }
 }
 
-pub(crate) fn parse_expression(expr: &str) -> Expr {
-    Parser::new(&Lexer::new(expr).scan()).parse()
+pub(crate) fn parse_expression(expr: &str) -> Result<Expr, ParseError> {
+    Parser::new(&Lexer::new(expr).scan()?).parse()
 }
 
 #[cfg(test)]
@@ -580,24 +612,19 @@ mod tests {
 
     #[test]
     fn parse_invalid() {
-        assert_panic(|| parse_expression("+ 1n"));
-        assert_panic(|| parse_expression("20:00:02 -"));
-        assert_panic(|| parse_expression("(3n * 4n"));
-        assert_panic(|| parse_expression("5:55:55 / 6:06:06 +"));
-        assert_panic(|| parse_expression("7n + 8:08:08 )"));
-        assert_panic(|| parse_expression("0:09:09 * 10n ) + 11:11:11"));
+        assert!(parse_expression("+ 1n").is_err());
+        assert!(parse_expression("20:00:02 -").is_err());
+        assert!(parse_expression("(3n * 4n").is_err());
+        assert!(parse_expression("5:55:55 / 6:06:06 +").is_err());
+        assert!(parse_expression("7n + 8:08:08 )").is_err());
+        assert!(parse_expression("0:09:09 * 10n ) + 11:11:11").is_err());
     }
 
     fn assert_scan_tokens(input: &str, tokens: Vec<Token>) {
-        assert_eq!(Lexer::new(input).scan(), tokens);
+        assert_eq!(Lexer::new(input).scan().unwrap(), tokens);
     }
 
     fn assert_parse_expression(input: &str, expr: Expr) {
-        assert_eq!(parse_expression(input), expr);
-    }
-
-    fn assert_panic<F: FnOnce() -> R + std::panic::UnwindSafe, R>(f: F) {
-        let result = std::panic::catch_unwind(f);
-        assert!(result.is_err());
+        assert_eq!(parse_expression(input).unwrap(), expr);
     }
 }

@@ -1,11 +1,12 @@
 use std::fmt;
 use std::iter::Peekable;
+use std::result::Result;
 use std::str::Chars;
 
 use crate::time::Time;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-enum Token {
+pub enum Token {
     Hyphen,
     Number(String),
     Colon,
@@ -31,6 +32,12 @@ struct Lexer<'a> {
     scan_complete: bool,
 }
 
+#[derive(Debug)]
+pub enum LexError {
+    UnexpectedCharacter(char),
+    EndOfInput,
+}
+
 impl<'a> Lexer<'a> {
     fn new(input: &str) -> Lexer {
         Lexer {
@@ -40,22 +47,32 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn scan(&mut self) -> Vec<Token> {
+    fn scan(&mut self) -> Result<Vec<Token>, Vec<LexError>> {
+        let mut errors = Vec::new();
+
         if !self.scan_complete {
             while let Some(ch) = self.peek() {
                 if ch.is_numeric() {
-                    self.scan_number();
+                    if let Result::Err(err) = self.scan_number() {
+                        errors.push(err);
+                    }
                 } else {
-                    self.scan_character();
+                    if let Result::Err(err) = self.scan_character() {
+                        errors.push(err);
+                    }
                 }
             }
         }
 
         self.scan_complete = true;
-        self.tokens.clone()
+        if errors.is_empty() {
+            Result::Ok(self.tokens.clone())
+        } else {
+            Result::Err(errors)
+        }
     }
 
-    fn scan_number(&mut self) {
+    fn scan_number(&mut self) -> Result<(), LexError> {
         let mut num = String::new();
         loop {
             match self.peek() {
@@ -66,19 +83,22 @@ impl<'a> Lexer<'a> {
                 _ => break,
             }
         }
+
         self.tokens.push(Token::Number(num));
+        Ok(())
     }
 
-    fn scan_character(&mut self) {
+    fn scan_character(&mut self) -> Result<(), LexError> {
         let token = match self.next() {
             Option::Some('-') => Token::Hyphen,
             Option::Some(':') => Token::Colon,
             Option::Some('.') => Token::FullStop,
-            Option::Some(c) => panic!("Unexpected character: {}", c),
-            Option::None => panic!("Unexpected end of input."),
+            Option::Some(c) => return Result::Err(LexError::UnexpectedCharacter(c)),
+            Option::None => return Result::Err(LexError::EndOfInput),
         };
 
         self.tokens.push(token);
+        Ok(())
     }
 
     fn peek(&mut self) -> Option<&char> {
@@ -94,12 +114,35 @@ struct Parser {
     tokens: Vec<Token>
 }
 
+#[derive(Debug)]
+pub enum ParseError {
+    LexError(Vec<LexError>),
+    ExpectedHours(Option<Token>),
+    ExpectedMinutes(Option<Token>),
+    ExpectedSeconds(Option<Token>),
+    ExpectedNanoseconds(Option<Token>),
+    ExpectedPeriod(Option<Token>),
+    ExpectedColon(Option<Token>),
+    ExpectedTwoDigitMinutes(Option<Token>),
+    ExpectedTwoDigitSeconds(Option<Token>),
+    SecondsOutOfRange(Option<Token>),
+    MinutesOutOfRange(Option<Token>),
+    FractionalSecondsTooLarge(Option<Token>),
+    ExpectedEndOfInputOrFraction(Option<Token>),
+}
+
+impl std::convert::From<Vec<LexError>> for ParseError {
+    fn from(lex_error: Vec<LexError>) -> Self {
+        ParseError::LexError(lex_error)
+    }
+}
+
 impl Parser {
     fn new(tokens: Vec<Token>) -> Parser {
         Parser { tokens }
     }
 
-    fn parse(self) -> Time {
+    fn parse(self) -> Result<Time, ParseError> {
         let mut time_builder = Time::builder();
         let mut token_iter = self.tokens.into_iter().peekable();
 
@@ -111,40 +154,62 @@ impl Parser {
 
         match token_iter.next() {
             Option::Some(Token::Number(n)) => {time_builder.hours(n.parse().unwrap());},
-            Option::Some(t) => panic!("Expected hours, but found {}.", t),
-            Option::None => panic!("Expected hours, but found reached end of time."),
+            Option::Some(t) => return Result::Err(ParseError::ExpectedHours(Option::Some(t))),
+            Option::None => return Result::Err(ParseError::ExpectedHours(Option::None)),
         }
         match token_iter.next() {
             Option::Some(Token::Colon) => (),
-            Option::Some(t) => panic!("Expected :, but found {}.", t),
-            Option::None => panic!("Expected :, but found reached end of time."),
+            Option::Some(t) => return Result::Err(ParseError::ExpectedColon(Option::Some(t))),
+            Option::None => return Result::Err(ParseError::ExpectedColon(Option::None)),
         }
 
         match token_iter.next() {
             Option::Some(Token::Number(n)) => {
-                if n.len() != 2 {
-                    panic!("Expected minutes in 2 digit format.");
+                if let Result::Ok(minutes) = n.parse() {
+                    if n.len() != 2 {
+                        return Result::Err(ParseError::ExpectedTwoDigitMinutes(Option::Some(Token::Number(n))));
+                    }
+                    if minutes < 60 {
+                        time_builder.minutes(minutes);
+                    }
+                    else {
+                        return Result::Err(ParseError::MinutesOutOfRange(Option::Some(Token::Number(n))));
+                    }
                 }
-                time_builder.minutes(n.parse().unwrap());
+                else {
+                    return Result::Err(ParseError::ExpectedMinutes(Option::Some(Token::Number(n))));
+                }
+                // time_builder.minutes(n.parse().unwrap());
             },
-            Option::Some(t) => panic!("Expected minutes, but found {}.", t),
-            Option::None => panic!("Expected minutes, but found reached end of time."),
+            Option::Some(t) => return Result::Err(ParseError::ExpectedMinutes(Option::Some(t))),
+            Option::None => return Result::Err(ParseError::ExpectedMinutes(Option::None)),
         }
         match token_iter.next() {
             Option::Some(Token::Colon) => (),
-            Option::Some(t) => panic!("Expected :, but found {}", t),
-            Option::None => panic!("Expected :, but found reached end of time."),
+            Option::Some(t) => return Result::Err(ParseError::ExpectedColon(Option::Some(t))),
+            Option::None => return Result::Err(ParseError::ExpectedColon(Option::None)),
         }
 
         match token_iter.next() {
             Option::Some(Token::Number(n)) => {
-                if n.len() != 2 {
-                    panic!("Expected seconds in 2 digit format.");
+                if let Result::Ok(seconds) = n.parse() {
+                    if n.len() != 2 {
+                        return Result::Err(ParseError::ExpectedTwoDigitSeconds(Option::Some(Token::Number(n))));
+                    }
+                    if seconds < 60 {
+                        time_builder.seconds(seconds);
+                    }
+                    else {
+                        return Result::Err(ParseError::SecondsOutOfRange(Option::Some(Token::Number(n))));
+                    }
                 }
-                time_builder.seconds(n.parse().unwrap());
+                else {
+                    return Result::Err(ParseError::ExpectedSeconds(Option::Some(Token::Number(n))));
+                }
+                // time_builder.seconds(n.parse().unwrap());
             },
-            Option::Some(t) => panic!("Expected seconds, but found {}.", t),
-            Option::None => panic!("Expected seconds, but found reached end of time."),
+            Option::Some(t) => return Result::Err(ParseError::ExpectedSeconds(Option::Some(t))),
+            Option::None => return Result::Err(ParseError::ExpectedSeconds(Option::None)),
         }
 
         match token_iter.peek() {
@@ -153,7 +218,7 @@ impl Parser {
                 match token_iter.next() {
                     Option::Some(Token::Number(mut n)) => {
                         if n.len() > 9 {
-                            panic!("Fractional seconds part is too large.");
+                            return Result::Err(ParseError::FractionalSecondsTooLarge(Option::Some(Token::Number(n))));
                         }
                         while n.len() < 9 {
                             n.push('0');
@@ -161,20 +226,20 @@ impl Parser {
 
                         time_builder.nanoseconds(n.parse().unwrap());
                     },
-                    Option::Some(t) => panic!("Expected nanoseconds, but found {}.", t),
-                    Option::None => panic!("Expected nanoseconds, but found end of time."),
+                    Option::Some(t) => return Result::Err(ParseError::ExpectedNanoseconds(Option::Some(t))),
+                    Option::None => return Result::Err(ParseError::ExpectedNanoseconds(Option::None)),
                 }
             },
-            Option::Some(t) => panic!("Expected nanoseconds or end of time, but found {}.", t),
+            Option::Some(t) => return Result::Err(ParseError::ExpectedEndOfInputOrFraction(Option::Some(t.clone()))),
             Option::None => (),
         }
 
-        time_builder.build()
+        Result::Ok(time_builder.build())
     }
 }
 
-pub fn parse_time(time: &str) -> Time {
-    Parser::new(Lexer::new(time).scan()).parse()
+pub(crate) fn parse_time(time: &str) -> Result<Time, ParseError> {
+    Parser::new(Lexer::new(time).scan()?).parse()
 }
 
 #[cfg(test)]
@@ -305,25 +370,26 @@ mod tests {
 
     #[test]
     fn scan_unknown_tokens() {
-        assert_panic(|| Lexer::new(" ").scan());
-        assert_panic(|| Lexer::new("!").scan());
-        assert_panic(|| Lexer::new("@").scan());
-        assert_panic(|| Lexer::new("a").scan());
-        assert_panic(|| Lexer::new("bcd").scan());
-        assert_panic(|| Lexer::new("-e").scan());
-        assert_panic(|| Lexer::new("f-").scan());
-        assert_panic(|| Lexer::new(":g").scan());
-        assert_panic(|| Lexer::new("g:").scan());
-        assert_panic(|| Lexer::new(".i").scan());
-        assert_panic(|| Lexer::new("j.").scan());
-        assert_panic(|| Lexer::new("1-2-k").scan());
-        assert_panic(|| Lexer::new("l-3-4").scan());
-        assert_panic(|| Lexer::new("5:6:m").scan());
-        assert_panic(|| Lexer::new("n:7:8").scan());
-        assert_panic(|| Lexer::new("9.0.o").scan());
-        assert_panic(|| Lexer::new("p.1.2").scan());
-        assert_panic(|| Lexer::new("-3qrs4:5tuv6:7wxy8.999").scan());
-        assert_panic(|| Lexer::new("-12:34:56.789z").scan());
+        assert!(Lexer::new(" ").scan().is_err());
+        assert!(Lexer::new(" ").scan().is_err());
+        assert!(Lexer::new("!").scan().is_err());
+        assert!(Lexer::new("@").scan().is_err());
+        assert!(Lexer::new("a").scan().is_err());
+        assert!(Lexer::new("bcd").scan().is_err());
+        assert!(Lexer::new("-e").scan().is_err());
+        assert!(Lexer::new("f-").scan().is_err());
+        assert!(Lexer::new(":g").scan().is_err());
+        assert!(Lexer::new("g:").scan().is_err());
+        assert!(Lexer::new(".i").scan().is_err());
+        assert!(Lexer::new("j.").scan().is_err());
+        assert!(Lexer::new("1-2-k").scan().is_err());
+        assert!(Lexer::new("l-3-4").scan().is_err());
+        assert!(Lexer::new("5:6:m").scan().is_err());
+        assert!(Lexer::new("n:7:8").scan().is_err());
+        assert!(Lexer::new("9.0.o").scan().is_err());
+        assert!(Lexer::new("p.1.2").scan().is_err());
+        assert!(Lexer::new("-3qrs4:5tuv6:7wxy8.999").scan().is_err());
+        assert!(Lexer::new("-12:34:56.789z").scan().is_err());
     }
 
     #[test]
@@ -360,56 +426,51 @@ mod tests {
     #[test]
     fn parse_invalid_time() {
         // Missing components.
-        assert_panic(|| parse_time(""));
-        assert_panic(|| parse_time("12"));
-        assert_panic(|| parse_time("12:"));
-        assert_panic(|| parse_time("12:34"));
-        assert_panic(|| parse_time("12:34:"));
-        assert_panic(|| parse_time(":34:56"));
-        assert_panic(|| parse_time("12::56"));
-        assert_panic(|| parse_time("-12"));
-        assert_panic(|| parse_time("-12:34"));
-        assert_panic(|| parse_time("-:34:56"));
-        assert_panic(|| parse_time("-12::56"));
+        assert!(parse_time("").is_err());
+        assert!(parse_time("12").is_err());
+        assert!(parse_time("12:").is_err());
+        assert!(parse_time("12:34").is_err());
+        assert!(parse_time("12:34:").is_err());
+        assert!(parse_time(":34:56").is_err());
+        assert!(parse_time("12::56").is_err());
+        assert!(parse_time("-12").is_err());
+        assert!(parse_time("-12:34").is_err());
+        assert!(parse_time("-:34:56").is_err());
+        assert!(parse_time("-12::56").is_err());
 
         // Trailing decimal.
-        assert_panic(|| parse_time("12:34:56."));
+        assert!(parse_time("12:34:56.").is_err());
         // Too many fractional second digits.
-        assert_panic(|| parse_time("12:34:56.0123456789"));
+        assert!(parse_time("12:34:56.0123456789").is_err());
 
 
         // Invalid seconds.
-        assert_panic(|| parse_time("00:00:0"));
-        assert_panic(|| parse_time("00:00:4"));
-        assert_panic(|| parse_time("00:00:60"));
-        assert_panic(|| parse_time("00:00:99"));
+        assert!(parse_time("00:00:0").is_err());
+        assert!(parse_time("00:00:4").is_err());
+        assert!(parse_time("00:00:60").is_err());
+        assert!(parse_time("00:00:99").is_err());
 
         // Invalid minutes.
-        assert_panic(|| parse_time("00:8:00"));
-        assert_panic(|| parse_time("00:60:00"));
-        assert_panic(|| parse_time("00:99:00"));
+        assert!(parse_time("00:8:00").is_err());
+        assert!(parse_time("00:60:00").is_err());
+        assert!(parse_time("00:99:00").is_err());
 
         // Invalid tokens.
-        assert_panic(|| parse_time("00.00:00"));
-        assert_panic(|| parse_time("00:00-00"));
-        assert_panic(|| parse_time("00:00:00:"));
-        assert_panic(|| parse_time(":00:00:00"));
-        assert_panic(|| parse_time(".00:00:00"));
-        assert_panic(|| parse_time("00:00:00-"));
-        assert_panic(|| parse_time("00:00:00.."));
-        assert_panic(|| parse_time("--00:00:00"));
+        assert!(parse_time("00.00:00").is_err());
+        assert!(parse_time("00:00-00").is_err());
+        assert!(parse_time("00:00:00:").is_err());
+        assert!(parse_time(":00:00:00").is_err());
+        assert!(parse_time(".00:00:00").is_err());
+        assert!(parse_time("00:00:00-").is_err());
+        assert!(parse_time("00:00:00..").is_err());
+        assert!(parse_time("--00:00:00").is_err());
     }
 
     fn assert_scan_tokens(input: &str, tokens: Vec<Token>) {
-        assert_eq!(Lexer::new(input).scan(), tokens);
-    }
-
-    fn assert_panic<F: FnOnce() -> R + std::panic::UnwindSafe, R>(f: F) {
-        let result = std::panic::catch_unwind(f);
-        assert!(result.is_err());
+        assert_eq!(Lexer::new(input).scan().unwrap(), tokens);
     }
 
     fn assert_parse_time(time_str: &str, time: Time) {
-        assert_eq!(parse_time(time_str), time);
+        assert_eq!(parse_time(time_str).unwrap(), time);
     }
 }
