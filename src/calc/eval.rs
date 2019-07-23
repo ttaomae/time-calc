@@ -1,9 +1,9 @@
+use crate::calc::parse::parse_expression;
+use crate::calc::parse::BinaryOp;
 use crate::calc::parse::Expr;
 use crate::calc::parse::Literal;
-use crate::calc::parse::BinaryOp;
 use crate::calc::parse::ParseError;
 use crate::calc::parse::UnaryOp;
-use crate::calc::parse::parse_expression;
 use crate::time::Time;
 
 use rust_decimal::Decimal;
@@ -52,7 +52,6 @@ pub(crate) enum EvalError {
     DivideNumberByTime,
 }
 
-
 impl std::convert::From<ParseError> for EvalError {
     fn from(parse_error: ParseError) -> Self {
         EvalError::ParseError(parse_error)
@@ -77,40 +76,32 @@ impl ExprVisitor for ExprEvaluator {
                 let r2 = right.accept(self)?;
 
                 match (r1, r2) {
-                    (EvalResult::Number(n1), EvalResult::Number(n2)) => {
-                        match op {
-                            BinaryOp::Add => Result::Ok(EvalResult::Number(n1 + n2)),
-                            BinaryOp::Subtract => Result::Ok(EvalResult::Number(n1 - n2)),
-                            BinaryOp::Multiply => Result::Ok(EvalResult::Number(n1 * n2)),
-                            BinaryOp::Divide => Result::Ok(EvalResult::Number(n1 / n2)),
-                        }
+                    (EvalResult::Number(n1), EvalResult::Number(n2)) => match op {
+                        BinaryOp::Add => Result::Ok(EvalResult::Number(n1 + n2)),
+                        BinaryOp::Subtract => Result::Ok(EvalResult::Number(n1 - n2)),
+                        BinaryOp::Multiply => Result::Ok(EvalResult::Number(n1 * n2)),
+                        BinaryOp::Divide => Result::Ok(EvalResult::Number(n1 / n2)),
                     },
-                    (EvalResult::Time(t1), EvalResult::Time(t2)) => {
-                        match op {
-                            BinaryOp::Add => Result::Ok(EvalResult::Time(t1 + t2)),
-                            BinaryOp::Subtract => Result::Ok(EvalResult::Time(t1 - t2)),
-                            BinaryOp::Divide => Result::Ok(EvalResult::Number(t1 / t2)),
-                            BinaryOp::Multiply => Result::Err(EvalError::MultiplyTimes),
-                        }
-                    }
-                    (EvalResult::Time(t), EvalResult::Number(n)) => {
-                        match op {
-                            BinaryOp::Multiply => Result::Ok(EvalResult::Time(t * n)),
-                            BinaryOp::Divide => Result::Ok(EvalResult::Time(t / n)),
-                            BinaryOp::Add => Result::Err(EvalError::AddTimeAndNumber),
-                            BinaryOp::Subtract => Result::Err(EvalError::SubtractTimeAndNumber),
-                        }
+                    (EvalResult::Time(t1), EvalResult::Time(t2)) => match op {
+                        BinaryOp::Add => Result::Ok(EvalResult::Time(t1 + t2)),
+                        BinaryOp::Subtract => Result::Ok(EvalResult::Time(t1 - t2)),
+                        BinaryOp::Divide => Result::Ok(EvalResult::Number(t1 / t2)),
+                        BinaryOp::Multiply => Result::Err(EvalError::MultiplyTimes),
                     },
-                    (EvalResult::Number(n), EvalResult::Time(t)) => {
-                        match op {
-                            BinaryOp::Multiply => Result::Ok(EvalResult::Time(n * t)),
-                            BinaryOp::Add => Result::Err(EvalError::AddTimeAndNumber),
-                            BinaryOp::Subtract => Result::Err(EvalError::SubtractTimeAndNumber),
-                            BinaryOp::Divide => Result::Err(EvalError::DivideNumberByTime),
-                        }
+                    (EvalResult::Time(t), EvalResult::Number(n)) => match op {
+                        BinaryOp::Multiply => Result::Ok(EvalResult::Time(t * n)),
+                        BinaryOp::Divide => Result::Ok(EvalResult::Time(t / n)),
+                        BinaryOp::Add => Result::Err(EvalError::AddTimeAndNumber),
+                        BinaryOp::Subtract => Result::Err(EvalError::SubtractTimeAndNumber),
+                    },
+                    (EvalResult::Number(n), EvalResult::Time(t)) => match op {
+                        BinaryOp::Multiply => Result::Ok(EvalResult::Time(n * t)),
+                        BinaryOp::Add => Result::Err(EvalError::AddTimeAndNumber),
+                        BinaryOp::Subtract => Result::Err(EvalError::SubtractTimeAndNumber),
+                        BinaryOp::Divide => Result::Err(EvalError::DivideNumberByTime),
                     },
                 }
-            },
+            }
             _ => panic!(),
         }
     }
@@ -123,7 +114,7 @@ impl ExprVisitor for ExprEvaluator {
                     EvalResult::Time(t) => Result::Ok(EvalResult::Time(t * dec!(-1))),
                     EvalResult::Number(n) => Result::Ok(EvalResult::Number(n * dec!(-1))),
                 }
-            },
+            }
             _ => panic!(),
         }
     }
@@ -134,11 +125,12 @@ pub(in crate) fn eval(expression: &str) -> Result<EvalResult, EvalError> {
 }
 
 #[cfg(test)]
+#[rustfmt::skip]
 mod tests {
     use super::eval;
     use crate::calc::eval::EvalResult;
-    use rust_decimal_macros::dec;
     use crate::time::Time;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn eval_numbers_only() {

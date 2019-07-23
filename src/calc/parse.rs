@@ -1,8 +1,8 @@
 use std::fmt::Error;
 use std::fmt::Formatter;
 use std::iter::Peekable;
-use std::slice::Iter;
 use std::result::Result;
+use std::slice::Iter;
 use std::str::Chars;
 use std::str::FromStr;
 
@@ -46,7 +46,7 @@ impl std::fmt::Debug for Token {
 struct Lexer<'a> {
     chars: Peekable<Chars<'a>>,
     tokens: Vec<Token>,
-    scan_complete: bool
+    scan_complete: bool,
 }
 
 #[derive(Debug)]
@@ -72,8 +72,7 @@ impl<'a> Lexer<'a> {
                     if let Result::Err(e) = self.scan_number() {
                         errors.push(e);
                     }
-                }
-                else if let Result::Err(e) = self.scan_character() {
+                } else if let Result::Err(e) = self.scan_character() {
                     errors.push(e)
                 }
             }
@@ -101,9 +100,7 @@ impl<'a> Lexer<'a> {
         if self.peek() == Option::Some(&'n') {
             self.next();
             self.tokens.push(Token::Number(num));
-
-        }
-        else {
+        } else {
             self.tokens.push(Token::Time(num));
         }
 
@@ -163,7 +160,7 @@ pub(crate) enum BinaryOp {
     Divide,
 }
 
-struct Parser<'a>{
+struct Parser<'a> {
     tokens: Peekable<Iter<'a, Token>>,
 }
 
@@ -182,7 +179,7 @@ impl std::convert::From<Vec<LexError>> for ParseError {
 }
 
 impl<'a> Parser<'a> {
-    fn new(tokens: &'a[Token]) -> Parser<'a> {
+    fn new(tokens: &'a [Token]) -> Parser<'a> {
         Parser {
             tokens: tokens.iter().peekable(),
         }
@@ -191,7 +188,7 @@ impl<'a> Parser<'a> {
     fn parse(&mut self) -> Result<Expr, ParseError> {
         let expr = self.expression();
         if self.peek().is_some() {
-            return Result::Err(ParseError::LeftoverTokens(self.remaining_tokens()))
+            return Result::Err(ParseError::LeftoverTokens(self.remaining_tokens()));
         }
 
         expr
@@ -206,13 +203,19 @@ impl<'a> Parser<'a> {
         while let Option::Some(token) = self.peek() {
             if token == &&Token::Plus {
                 self.next(); // Consume plus
-                expr = Expr::Binary(Box::new(expr), BinaryOp::Add, Box::new(self.multiplication()?));
-            }
-            else if token == &&Token::Hyphen {
+                expr = Expr::Binary(
+                    Box::new(expr),
+                    BinaryOp::Add,
+                    Box::new(self.multiplication()?),
+                );
+            } else if token == &&Token::Hyphen {
                 self.next(); // Consume hyphen.
-                expr = Expr::Binary(Box::new(expr), BinaryOp::Subtract, Box::new(self.multiplication()?));
-            }
-            else {
+                expr = Expr::Binary(
+                    Box::new(expr),
+                    BinaryOp::Subtract,
+                    Box::new(self.multiplication()?),
+                );
+            } else {
                 break;
             }
         }
@@ -225,12 +228,10 @@ impl<'a> Parser<'a> {
             if token == &&Token::Asterisk {
                 self.next(); // Consume asterisk.
                 expr = Expr::Binary(Box::new(expr), BinaryOp::Multiply, Box::new(self.unary()?));
-            }
-            else if token == &&Token::Slash  {
+            } else if token == &&Token::Slash {
                 self.next(); // Consume slash.
                 expr = Expr::Binary(Box::new(expr), BinaryOp::Divide, Box::new(self.unary()?));
-            }
-            else {
+            } else {
                 break;
             }
         }
@@ -241,8 +242,7 @@ impl<'a> Parser<'a> {
         if self.peek() == Option::Some(&&Token::Hyphen) {
             self.next(); // Consume hyphen.
             Result::Ok(Expr::Unary(UnaryOp::Negative, Box::new(self.value()?)))
-        }
-        else {
+        } else {
             self.value()
         }
     }
@@ -252,21 +252,27 @@ impl<'a> Parser<'a> {
             Option::Some(Token::Number(n)) => {
                 let num = Decimal::from_str(n).unwrap();
                 Result::Ok(Expr::Literal(Literal::Number(num)))
-            },
+            }
             Option::Some(Token::Time(t)) => {
                 let time = Time::from_str(t).unwrap();
                 Result::Ok(Expr::Literal(Literal::Time(time)))
-            },
+            }
             Option::Some(Token::LeftParen) => {
                 let expr = self.expression();
                 match self.next() {
                     Option::Some(Token::RightParen) => (),
-                    Option::Some(t) => return Result::Err(ParseError::ExpectedRightParen(Option::Some(t.clone()))),
-                    Option::None => return Result::Err(ParseError::ExpectedRightParen(Option::None)),
+                    Option::Some(t) => {
+                        return Result::Err(ParseError::ExpectedRightParen(Option::Some(t.clone())))
+                    }
+                    Option::None => {
+                        return Result::Err(ParseError::ExpectedRightParen(Option::None))
+                    }
                 }
                 expr
             }
-            Option::Some(token) => Result::Err(ParseError::ExpectedLiteral(Option::Some(token.clone()))),
+            Option::Some(token) => {
+                Result::Err(ParseError::ExpectedLiteral(Option::Some(token.clone())))
+            }
             Option::None => Result::Err(ParseError::ExpectedLiteral(Option::None)),
         }
     }
@@ -295,13 +301,14 @@ pub(crate) fn parse_expression(expr: &str) -> Result<Expr, ParseError> {
 }
 
 #[cfg(test)]
+#[rustfmt::skip]
 mod tests {
+    use super::parse_expression;
+    use super::Expr;
     use super::Lexer;
+    use super::Literal;
     use super::Token;
     use super::Token::*;
-    use super::Expr;
-    use super::Literal;
-    use super::parse_expression;
     use crate::calc::parse::BinaryOp;
     use crate::calc::parse::UnaryOp;
     use crate::time::Time;

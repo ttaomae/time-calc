@@ -234,7 +234,6 @@ impl FromStr for Time {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         parse_time(s)
     }
-
 }
 
 impl fmt::Display for Time {
@@ -278,7 +277,8 @@ impl fmt::Display for Time {
 
 impl From<Time> for Decimal {
     fn from(time: Time) -> Self {
-        Decimal::new(time.total_seconds(), 0) + Decimal::new(i64::from(time.nanoseconds_offset()), 9)
+        Decimal::new(time.total_seconds(), 0)
+            + Decimal::new(i64::from(time.nanoseconds_offset()), 9)
     }
 }
 

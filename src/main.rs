@@ -19,7 +19,7 @@ fn main() {
         Result::Err(error) => {
             eprintln!("{:?}", error);
             process::exit(2);
-        },
+        }
     }
 }
 

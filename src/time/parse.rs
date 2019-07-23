@@ -109,7 +109,7 @@ impl<'a> Lexer<'a> {
 }
 
 struct Parser {
-    tokens: Vec<Token>
+    tokens: Vec<Token>,
 }
 
 #[derive(Debug)]
@@ -151,7 +151,9 @@ impl Parser {
         }
 
         match token_iter.next() {
-            Option::Some(Token::Number(n)) => {time_builder.hours(n.parse().unwrap());},
+            Option::Some(Token::Number(n)) => {
+                time_builder.hours(n.parse().unwrap());
+            }
             Option::Some(t) => return Result::Err(ParseError::ExpectedHours(Option::Some(t))),
             Option::None => return Result::Err(ParseError::ExpectedHours(Option::None)),
         }
@@ -165,20 +167,24 @@ impl Parser {
             Option::Some(Token::Number(n)) => {
                 if let Result::Ok(minutes) = n.parse() {
                     if n.len() != 2 {
-                        return Result::Err(ParseError::ExpectedTwoDigitMinutes(Option::Some(Token::Number(n))));
+                        return Result::Err(ParseError::ExpectedTwoDigitMinutes(Option::Some(
+                            Token::Number(n),
+                        )));
                     }
                     if minutes < 60 {
                         time_builder.minutes(minutes);
+                    } else {
+                        return Result::Err(ParseError::MinutesOutOfRange(Option::Some(
+                            Token::Number(n),
+                        )));
                     }
-                    else {
-                        return Result::Err(ParseError::MinutesOutOfRange(Option::Some(Token::Number(n))));
-                    }
-                }
-                else {
-                    return Result::Err(ParseError::ExpectedMinutes(Option::Some(Token::Number(n))));
+                } else {
+                    return Result::Err(ParseError::ExpectedMinutes(Option::Some(Token::Number(
+                        n,
+                    ))));
                 }
                 // time_builder.minutes(n.parse().unwrap());
-            },
+            }
             Option::Some(t) => return Result::Err(ParseError::ExpectedMinutes(Option::Some(t))),
             Option::None => return Result::Err(ParseError::ExpectedMinutes(Option::None)),
         }
@@ -192,20 +198,24 @@ impl Parser {
             Option::Some(Token::Number(n)) => {
                 if let Result::Ok(seconds) = n.parse() {
                     if n.len() != 2 {
-                        return Result::Err(ParseError::ExpectedTwoDigitSeconds(Option::Some(Token::Number(n))));
+                        return Result::Err(ParseError::ExpectedTwoDigitSeconds(Option::Some(
+                            Token::Number(n),
+                        )));
                     }
                     if seconds < 60 {
                         time_builder.seconds(seconds);
+                    } else {
+                        return Result::Err(ParseError::SecondsOutOfRange(Option::Some(
+                            Token::Number(n),
+                        )));
                     }
-                    else {
-                        return Result::Err(ParseError::SecondsOutOfRange(Option::Some(Token::Number(n))));
-                    }
-                }
-                else {
-                    return Result::Err(ParseError::ExpectedSeconds(Option::Some(Token::Number(n))));
+                } else {
+                    return Result::Err(ParseError::ExpectedSeconds(Option::Some(Token::Number(
+                        n,
+                    ))));
                 }
                 // time_builder.seconds(n.parse().unwrap());
-            },
+            }
             Option::Some(t) => return Result::Err(ParseError::ExpectedSeconds(Option::Some(t))),
             Option::None => return Result::Err(ParseError::ExpectedSeconds(Option::None)),
         }
@@ -216,19 +226,29 @@ impl Parser {
                 match token_iter.next() {
                     Option::Some(Token::Number(mut n)) => {
                         if n.len() > 9 {
-                            return Result::Err(ParseError::FractionalSecondsTooLarge(Option::Some(Token::Number(n))));
+                            return Result::Err(ParseError::FractionalSecondsTooLarge(
+                                Option::Some(Token::Number(n)),
+                            ));
                         }
                         while n.len() < 9 {
                             n.push('0');
                         }
 
                         time_builder.nanoseconds(n.parse().unwrap());
-                    },
-                    Option::Some(t) => return Result::Err(ParseError::ExpectedNanoseconds(Option::Some(t))),
-                    Option::None => return Result::Err(ParseError::ExpectedNanoseconds(Option::None)),
+                    }
+                    Option::Some(t) => {
+                        return Result::Err(ParseError::ExpectedNanoseconds(Option::Some(t)))
+                    }
+                    Option::None => {
+                        return Result::Err(ParseError::ExpectedNanoseconds(Option::None))
+                    }
                 }
-            },
-            Option::Some(t) => return Result::Err(ParseError::ExpectedEndOfInputOrFraction(Option::Some(t.clone()))),
+            }
+            Option::Some(t) => {
+                return Result::Err(ParseError::ExpectedEndOfInputOrFraction(Option::Some(
+                    t.clone(),
+                )))
+            }
             Option::None => (),
         }
 
@@ -241,11 +261,12 @@ pub(crate) fn parse_time(time: &str) -> Result<Time, ParseError> {
 }
 
 #[cfg(test)]
+#[rustfmt::skip]
 mod tests {
+    use super::parse_time;
     use super::Lexer;
     use super::Token;
     use super::Token::*;
-    use super::parse_time;
     use crate::time::Time;
 
     #[test]
@@ -440,7 +461,6 @@ mod tests {
         assert!(parse_time("12:34:56.").is_err());
         // Too many fractional second digits.
         assert!(parse_time("12:34:56.0123456789").is_err());
-
 
         // Invalid seconds.
         assert!(parse_time("00:00:0").is_err());
