@@ -56,10 +56,8 @@ impl<'a> Lexer<'a> {
                     if let Result::Err(err) = self.scan_number() {
                         errors.push(err);
                     }
-                } else {
-                    if let Result::Err(err) = self.scan_character() {
-                        errors.push(err);
-                    }
+                } else if let Result::Err(err) = self.scan_character() {
+                    errors.push(err);
                 }
             }
         }

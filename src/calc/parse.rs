@@ -73,10 +73,8 @@ impl<'a> Lexer<'a> {
                         errors.push(e);
                     }
                 }
-                else {
-                    if let Result::Err(e) = self.scan_character() {
-                        errors.push(e)
-                    }
+                else if let Result::Err(e) = self.scan_character() {
+                    errors.push(e)
                 }
             }
         }
@@ -184,7 +182,7 @@ impl std::convert::From<Vec<LexError>> for ParseError {
 }
 
 impl<'a> Parser<'a> {
-    fn new(tokens: &'a Vec<Token>) -> Parser<'a> {
+    fn new(tokens: &'a[Token]) -> Parser<'a> {
         Parser {
             tokens: tokens.iter().peekable(),
         }

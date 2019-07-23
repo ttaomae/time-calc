@@ -37,7 +37,7 @@ pub struct TimeBuilder {
 }
 
 impl Time {
-    const MAX_TIME_HOURS: u64 = 2562047788015215;
+    const MAX_TIME_HOURS: u64 = 2_562_047_788_015_215;
     const MAX_TIME_MINUTES: u8 = 30;
     const MAX_TIME_SECONDS: u8 = 7;
 
@@ -74,7 +74,7 @@ impl Time {
     /// * `-1` if the time is negative.
     fn signum(self) -> i64 {
         if self.total_seconds() == 0 {
-            (self.nanoseconds_offset() as i64).signum()
+            (i64::from(self.nanoseconds_offset())).signum()
         } else {
             self.total_seconds().signum()
         }
@@ -87,7 +87,7 @@ impl Time {
             total_seconds += 1;
         }
 
-        (total_seconds / Time::SECONDS_PER_HOUR as i64).abs() as u64
+        (total_seconds / i64::from(Time::SECONDS_PER_HOUR)).abs() as u64
     }
 
     /// Returns the minutes component of the time.
@@ -98,8 +98,8 @@ impl Time {
         }
 
         // Number of seconds in mm:ss portion of the time.
-        let seconds_in_minutes = total_seconds % Time::SECONDS_PER_HOUR as i64;
-        (seconds_in_minutes / Time::MINUTES_PER_HOUR as i64).abs() as u8
+        let seconds_in_minutes = total_seconds % i64::from(Time::SECONDS_PER_HOUR);
+        (seconds_in_minutes / i64::from(Time::MINUTES_PER_HOUR)).abs() as u8
     }
 
     /// Returns the seconds component of the time.
@@ -109,7 +109,7 @@ impl Time {
             total_seconds += 1;
         }
 
-        (total_seconds % Time::SECONDS_PER_MINUTE as i64).abs() as u8
+        (total_seconds % i64::from(Time::SECONDS_PER_MINUTE)).abs() as u8
     }
 
     /// Returns the nanoseconds component of the time.
@@ -173,9 +173,9 @@ impl TimeBuilder {
             panic!("Time exceeds maximum.");
         }
 
-        let mut seconds = (self.hours as u64 * Time::SECONDS_PER_HOUR as u64
-            + self.minutes as u64 * Time::SECONDS_PER_MINUTE as u64
-            + self.seconds as u64) as i64;
+        let mut seconds = (self.hours * u64::from(Time::SECONDS_PER_HOUR)
+            + u64::from(self.minutes) * u64::from(Time::SECONDS_PER_MINUTE)
+            + u64::from(self.seconds)) as i64;
 
         let mut nanoseconds = self.nanoseconds;
 
@@ -188,15 +188,15 @@ impl TimeBuilder {
 
         Time {
             seconds,
-            nanoseconds: nanoseconds as u32,
+            nanoseconds,
         }
     }
 }
 
 impl From<Decimal> for Time {
     fn from(decimal: Decimal) -> Self {
-        let seconds_per_hour = Decimal::new(Time::SECONDS_PER_HOUR as i64, 0);
-        let seconds_per_minute = Decimal::new(Time::SECONDS_PER_MINUTE as i64, 0);
+        let seconds_per_hour = Decimal::new(i64::from(Time::SECONDS_PER_HOUR), 0);
+        let seconds_per_minute = Decimal::new(i64::from(Time::SECONDS_PER_MINUTE), 0);
 
         let mut time_builder = Time::builder();
         if decimal.is_sign_negative() {
@@ -244,7 +244,7 @@ impl fmt::Display for Time {
         let seconds = self.seconds();
         let nanoseconds = self.nanoseconds();
 
-        if self.total_seconds() < 0 {
+        if self.signum() == -1 {
             write!(f, "-")?;
         }
         if hours > 0 {
@@ -278,7 +278,7 @@ impl fmt::Display for Time {
 
 impl From<Time> for Decimal {
     fn from(time: Time) -> Self {
-        Decimal::new(time.total_seconds(), 0) + Decimal::new(time.nanoseconds_offset() as i64, 9)
+        Decimal::new(time.total_seconds(), 0) + Decimal::new(i64::from(time.nanoseconds_offset()), 9)
     }
 }
 
