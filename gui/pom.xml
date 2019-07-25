@@ -39,9 +39,21 @@
   <build>
     <plugins>
       <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.8.1</version>
+      </plugin>
+      <plugin>
         <groupId>org.openjfx</groupId>
         <artifactId>javafx-maven-plugin</artifactId>
         <version>0.0.2</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>jlink</goal>
+            </goals>
+            <phase>package</phase>
+          </execution>
+        </executions>
         <configuration>
           <mainClass>ttaomae.timecalc/ttaomae.timecalc.TimeCalculator</mainClass>
           <stripDebug>true</stripDebug>
