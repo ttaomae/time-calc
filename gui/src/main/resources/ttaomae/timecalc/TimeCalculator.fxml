@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.VBox?>
+<?import ttaomae.timecalc.control.Display?>
+<?import ttaomae.timecalc.control.Keypad?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+    fx:controller="ttaomae.timecalc.TimeCalculatorController"
+    stylesheets="@./TimeCalculator.css">
+  <Display fx:id="display" />
+  <Keypad fx:id="keypad" VBox.vgrow="ALWAYS" />
+</VBox>
