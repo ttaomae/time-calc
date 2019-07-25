@@ -8,7 +8,7 @@
 
 .display > .label {
     -fx-max-width: infinity;
-    -fx-alignment: right;
+    -fx-alignment: center-right;
     -fx-label-padding: 10px;
 }
 
@@ -23,10 +23,10 @@
 }
 
 .keypad > .keys > .button {
-    -fx-min-width: 2em;
+    -fx-min-width: 4em;
     -fx-max-width: infinity;
 
-    -fx-min-height: 2em;
+    -fx-min-height: 4em;
     -fx-max-height: infinity;
 
     -fx-font-weight: bold;
