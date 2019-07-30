@@ -37,6 +37,9 @@
   </dependencies>
 
   <build>
+    <sourceDirectory>src/main/java/ttaomae.timecalc</sourceDirectory>
+    <testSourceDirectory>src/test/java/ttaomae.timecalc</testSourceDirectory>
+
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
