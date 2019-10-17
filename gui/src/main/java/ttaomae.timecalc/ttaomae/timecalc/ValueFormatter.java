@@ -61,7 +61,7 @@ public class ValueFormatter
         }
     }
 
-    private boolean charIsDigit(char ch)
+    private static boolean charIsDigit(char ch)
     {
         return ch >= '0' && ch <= '9';
     }
@@ -93,12 +93,8 @@ public class ValueFormatter
         if (currentState == State.FRACTION) {
             result.append('.');
             // If there is no digits input after decimal, add '0'.
-            if (fractionInput.length() == 0) {
-                result.append('0');
-            }
-            else {
-                result.append(fractionInput);
-            }
+            if (fractionInput.length() == 0) result.append('0');
+            else result.append(fractionInput);
         }
 
         // Append 'n' suffix used to identify numbers.
@@ -114,9 +110,9 @@ public class ValueFormatter
 
     private enum State
     {
-        /** Currently appending seconds. */
+        /** Currently appending to whole part. */
         WHOLE,
-        /** Currently appending fractional seconds. */
+        /** Currently appending to fractional part. */
         FRACTION
     }
 }
