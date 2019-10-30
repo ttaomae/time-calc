@@ -5,6 +5,7 @@
 <?import ttaomae.timecalc.control.Keypad?>
 
 <VBox xmlns:fx="http://javafx.com/fxml"
+    fx:id="root"
     fx:controller="ttaomae.timecalc.TimeCalculatorController"
     stylesheets="@./TimeCalculator.css">
   <Display fx:id="display" />

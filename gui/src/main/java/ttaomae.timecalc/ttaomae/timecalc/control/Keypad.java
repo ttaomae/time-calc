@@ -8,10 +8,12 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 
 import java.util.EnumMap;
+import java.util.Optional;
 
 public class Keypad extends Control
 {
@@ -42,7 +44,64 @@ public class Keypad extends Control
 
         Key(String toStringValue)
         {
+            assert toStringValue.length() == 1;
             this.toStringValue = toStringValue;
+        }
+
+        /**
+         * Returns the {@code char} value of this key. This is the value that should be input
+         * into {@link ttaomae.timecalc.ExpressionFormatter#inputCharacter(char)
+         * ExpressionFormatter#inputCharacter(char)}.
+         */
+        public char charValue()
+        {
+            if (this == NUMBER_SIGN) {
+                return 'n';
+            }
+            return toStringValue.charAt(0);
+        }
+
+        /**
+         * Returns the key corresponding to the specified {@code KeyCode}, or an empty optional if
+         * none exists.
+         */
+        public static Optional<Key> fromKeyCode(KeyCode keyCode)
+        {
+            if (keyCode == KeyCode.ESCAPE) {
+                return Optional.of(Key.CLEAR);
+            }
+
+            return Optional.empty();
+        }
+
+        /**
+         * Returns the key corresponding to the specified character (as returned by {@link
+         * javafx.scene.input.KeyEvent#getCharacter() KeyEvent#getCharacter()}), or an empty
+         * optional if none exists.
+         */
+        public static Optional<Key> fromCharacter(String character)
+        {
+            switch (character) {
+                case "0": return Optional.of(Key.ZERO);
+                case "1": return Optional.of(Key.ONE);
+                case "2": return Optional.of(Key.TWO);
+                case "3": return Optional.of(Key.THREE);
+                case "4": return Optional.of(Key.FOUR);
+                case "5": return Optional.of(Key.FIVE);
+                case "6": return Optional.of(Key.SIX);
+                case "7": return Optional.of(Key.SEVEN);
+                case "8": return Optional.of(Key.EIGHT);
+                case "9": return Optional.of(Key.NINE);
+                case ".": return Optional.of(Key.DECIMAL);
+                case "+": return Optional.of(Key.ADD);
+                case "-": return Optional.of(Key.SUBTRACT);
+                case "*": return Optional.of(Key.MULTIPLY);
+                case "/": return Optional.of(Key.DIVIDE);
+                case "#": case "n": case "N": return Optional.of(Key.NUMBER_SIGN);
+                case "(": return Optional.of(Key.LEFT_PAREN);
+                case ")": return Optional.of(Key.RIGHT_PAREN);
+                default: return Optional.empty();
+            }
         }
 
         @Override
