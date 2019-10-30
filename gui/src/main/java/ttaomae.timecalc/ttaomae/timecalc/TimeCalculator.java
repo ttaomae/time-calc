@@ -16,6 +16,8 @@ public class TimeCalculator extends Application
         var loader = new FXMLLoader(TimeCalculator.class.getResource("TimeCalculator.fxml"));
         stage.setScene(new Scene(loader.load()));
         stage.show();
+        stage.setMinHeight(stage.getHeight());
+        stage.setMinWidth(stage.getWidth());
     }
 
     public static void main(String[] args)
@@ -23,4 +25,3 @@ public class TimeCalculator extends Application
         launch();
     }
 }
-
