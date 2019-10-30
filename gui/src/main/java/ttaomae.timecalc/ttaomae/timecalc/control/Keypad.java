@@ -28,8 +28,8 @@ public class Keypad extends Control
         EIGHT("8"),
         NINE("9"),
         DECIMAL("."),
-        PLUS("+"),
-        MINUS("-"),
+        ADD("+"),
+        SUBTRACT("-"),
         DIVIDE("/"),
         MULTIPLY("*"),
         EQUALS("="),
@@ -107,12 +107,12 @@ public class Keypad extends Control
             buttonGrid.add(newButton(Key.FOUR),        0, 2);
             buttonGrid.add(newButton(Key.FIVE),        1, 2);
             buttonGrid.add(newButton(Key.SIX),         2, 2);
-            buttonGrid.add(newButton(Key.MINUS),       3, 2);
+            buttonGrid.add(newButton(Key.SUBTRACT),    3, 2);
 
             buttonGrid.add(newButton(Key.ONE),         0, 3);
             buttonGrid.add(newButton(Key.TWO),         1, 3);
             buttonGrid.add(newButton(Key.THREE),       2, 3);
-            buttonGrid.add(newButton(Key.PLUS),        3, 3);
+            buttonGrid.add(newButton(Key.ADD),         3, 3);
 
             buttonGrid.add(newButton(Key.NUMBER_SIGN), 0, 4);
             buttonGrid.add(newButton(Key.ZERO),        1, 4);
