@@ -88,7 +88,7 @@ public final class Result<T, E>
     public String toString()
     {
         assert value != null ^ error != null;
-        if (value != null) return "Success[" + value.toString() + "]";
-        return "Failure[" + error.toString() + "]";
+        if (value != null) return String.format("Success[%s]", value);
+        return String.format("Failure[%s]", error);
     }
 }
