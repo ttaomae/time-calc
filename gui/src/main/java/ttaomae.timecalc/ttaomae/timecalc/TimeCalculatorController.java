@@ -5,7 +5,9 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
 import ttaomae.timecalc.control.Display;
 import ttaomae.timecalc.control.Keypad;
+import ttaomae.timecalc.util.ExpressionEvalutor;
 import ttaomae.timecalc.util.ExpressionFormatter;
+import ttaomae.timecalc.util.StubExpressionEvaluator;
 
 public class TimeCalculatorController
 {
@@ -14,10 +16,12 @@ public class TimeCalculatorController
     @FXML private Keypad keypad;
 
     private final ExpressionFormatter formatter;
+    private final ExpressionEvalutor evalutor;
 
     public TimeCalculatorController()
     {
         formatter = new ExpressionFormatter();
+        evalutor = new StubExpressionEvaluator();
     }
 
     @FXML private void initialize()
@@ -35,12 +39,19 @@ public class TimeCalculatorController
         formatter.clear();
     }
 
+    private void evaluate()
+    {
+        display.setText(evalutor.evaluate(display.getText()).toString());
+    }
+
     private void updateDisplay(Keypad.Key key)
     {
         switch (key) {
             case CLEAR:
-            case EQUALS:
                 clear();
+                break;
+            case EQUALS:
+                evaluate();
                 break;
             default:
                 display.setText(formatter.inputCharacter(key.charValue()));

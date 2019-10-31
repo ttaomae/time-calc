@@ -67,8 +67,9 @@ public class Keypad extends Control
          */
         public static Optional<Key> fromKeyCode(KeyCode keyCode)
         {
-            if (keyCode == KeyCode.ESCAPE) {
-                return Optional.of(Key.CLEAR);
+            switch (keyCode) {
+                case ESCAPE: return Optional.of(Key.CLEAR);
+                case ENTER: return Optional.of(Key.EQUALS);
             }
 
             return Optional.empty();
@@ -100,6 +101,7 @@ public class Keypad extends Control
                 case "#": case "n": case "N": return Optional.of(Key.NUMBER_SIGN);
                 case "(": return Optional.of(Key.LEFT_PAREN);
                 case ")": return Optional.of(Key.RIGHT_PAREN);
+                case "=": return Optional.of(Key.EQUALS);
                 default: return Optional.empty();
             }
         }
