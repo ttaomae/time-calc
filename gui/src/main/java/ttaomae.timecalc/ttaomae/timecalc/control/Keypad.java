@@ -50,7 +50,7 @@ public class Keypad extends Control
 
         /**
          * Returns the {@code char} value of this key. This is the value that should be input
-         * into {@link ttaomae.timecalc.ExpressionFormatter#inputCharacter(char)
+         * into {@link ttaomae.timecalc.util.ExpressionFormatter#inputCharacter(char)
          * ExpressionFormatter#inputCharacter(char)}.
          */
         public char charValue()

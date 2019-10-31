@@ -1,4 +1,4 @@
-package ttaomae.timecalc;
+package ttaomae.timecalc.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

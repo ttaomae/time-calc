@@ -1,4 +1,4 @@
-package ttaomae.timecalc;
+package ttaomae.timecalc.util;
 
 import org.junit.jupiter.api.Test;
 

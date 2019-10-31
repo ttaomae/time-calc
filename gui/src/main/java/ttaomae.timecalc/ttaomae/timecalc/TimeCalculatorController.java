@@ -5,6 +5,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
 import ttaomae.timecalc.control.Display;
 import ttaomae.timecalc.control.Keypad;
+import ttaomae.timecalc.util.ExpressionFormatter;
 
 public class TimeCalculatorController
 {

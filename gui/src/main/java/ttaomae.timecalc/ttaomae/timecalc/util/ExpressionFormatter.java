@@ -1,4 +1,4 @@
-package ttaomae.timecalc;
+package ttaomae.timecalc.util;
 
 import java.util.ArrayList;
 import java.util.List;
