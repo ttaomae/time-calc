@@ -2,14 +2,20 @@
     -fx-min-height: 6em;
     -fx-max-width: infinity;
 
-    -fx-font-size: 3em;
-    -fx-font-weight: bold;
 }
 
-.display > .label {
+.display .input {
     -fx-max-width: infinity;
     -fx-alignment: center-right;
-    -fx-label-padding: 10px;
+    -fx-font-size: 2em;
+    -fx-text-overrun: leading-ellipsis;
+}
+
+.display .result {
+    -fx-max-width: infinity;
+    -fx-alignment: center-right;
+    -fx-font-size: 2em;
+    -fx-font-weight: bold;
 }
 
 .keypad {

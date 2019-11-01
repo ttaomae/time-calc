@@ -35,13 +35,14 @@ public class TimeCalculatorController
 
     private void clear()
     {
-        display.setText("");
+        display.setInputText("");
+        display.setResultText("");
         formatter.clear();
     }
 
     private void evaluate()
     {
-        display.setText(evalutor.evaluate(display.getText()).toString());
+        display.setResultText(evalutor.evaluate(display.getInputText()).toString());
     }
 
     private void updateDisplay(Keypad.Key key)
@@ -54,7 +55,7 @@ public class TimeCalculatorController
                 evaluate();
                 break;
             default:
-                display.setText(formatter.inputCharacter(key.charValue()));
+                display.setInputText(formatter.inputCharacter(key.charValue()));
                 break;
         }
     }
