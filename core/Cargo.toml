@@ -4,6 +4,11 @@ version = "0.1.0"
 authors = ["Todd Taomae <ttaomae@gmail.com>"]
 edition = "2018"
 
+
+[[bin]]
+name = "time-calc"
+path = "src/main/rust/main.rs"
+
 [dependencies]
 rust_decimal = "1.0.1"
 rust_decimal_macros = "1.0.1"
