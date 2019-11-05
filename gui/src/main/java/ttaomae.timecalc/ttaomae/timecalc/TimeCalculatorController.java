@@ -7,7 +7,12 @@ import ttaomae.timecalc.control.Display;
 import ttaomae.timecalc.control.Keypad;
 import ttaomae.timecalc.util.ExpressionEvalutor;
 import ttaomae.timecalc.util.ExpressionFormatter;
-import ttaomae.timecalc.util.StubExpressionEvaluator;
+import ttaomae.timecalc.util.TimeCalcCoreExpressionEvaluator;
+import ttaomae.timecalc.core.TimeCalcLoader;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class TimeCalculatorController
 {
@@ -21,7 +26,22 @@ public class TimeCalculatorController
     public TimeCalculatorController()
     {
         formatter = new ExpressionFormatter();
-        evalutor = new StubExpressionEvaluator();
+        evalutor = new TimeCalcCoreExpressionEvaluator(loadTimeCalcCore());
+    }
+
+    private static Path loadTimeCalcCore()
+    {
+        try (var exe = TimeCalcLoader.class.getResourceAsStream("/time-calc.exe")) {
+            var tempDir = Files.createTempDirectory("time-calc-");
+            tempDir.toFile().deleteOnExit();
+
+            var timeCalcPath = tempDir.resolve("tc.exe");
+            Files.copy(exe, timeCalcPath);
+            return timeCalcPath;
+        }
+        catch (IOException e) {
+            throw new IllegalStateException("Could not load time-calc/core executable.");
+        }
     }
 
     @FXML private void initialize()
@@ -36,13 +56,27 @@ public class TimeCalculatorController
     private void clear()
     {
         display.setInputText("");
-        display.setResultText("");
         formatter.clear();
+        display.setResultText("");
     }
 
     private void evaluate()
     {
-        display.setResultText(evalutor.evaluate(display.getInputText()).toString());
+        formatter.clear();
+        for (char ch : display.getResultText().toCharArray()) {
+            formatter.inputCharacter(ch);
+        }
+        display.setInputText(formatter.toString());
+    }
+
+    private void evaluate(Keypad.Key key)
+    {
+        String expression = formatter.inputCharacter(key.charValue());
+        display.setInputText(expression);
+        var result = evalutor.evaluate(expression);
+        if (result.isSuccess()) {
+            display.setResultText(result.getValue().get());
+        }
     }
 
     private void updateDisplay(Keypad.Key key)
@@ -55,7 +89,7 @@ public class TimeCalculatorController
                 evaluate();
                 break;
             default:
-                display.setInputText(formatter.inputCharacter(key.charValue()));
+                evaluate(key);
                 break;
         }
     }
