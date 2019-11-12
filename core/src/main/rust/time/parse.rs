@@ -454,6 +454,10 @@ mod tests {
         assert_parse_time("0:00:00.987654", Time::builder().nanoseconds(987654000).build());
         assert_parse_time("0:00:00.999999999", Time::builder().nanoseconds(999999999).build());
 
+        assert_parse_time("01s", Time::builder().seconds(1).build());
+        assert_parse_time("59s", Time::builder().seconds(59).build());
+        assert_parse_time("00:01", Time::builder().seconds(1).build());
+        assert_parse_time("00:59", Time::builder().seconds(59).build());
         assert_parse_time("0:00:01", Time::builder().seconds(1).build());
         assert_parse_time("0:00:59", Time::builder().seconds(59).build());
 
@@ -481,6 +485,19 @@ mod tests {
         assert_parse_time("59:00", Time::builder().minutes(59).build());
         assert_parse_time("59:59", Time::builder().minutes(59).seconds(59).build());
         assert_parse_time("12:34.56789", Time::builder().minutes(12).seconds(34).nanoseconds(567890000).build());
+
+        // Negative.
+        assert_parse_time("-0.000000001s", Time::builder().negative().nanoseconds(1).build());
+        assert_parse_time("-0.999999999s", Time::builder().negative().nanoseconds(999999999).build());
+        assert_parse_time("-1s", Time::builder().negative().seconds(1).build());
+        assert_parse_time("-59s", Time::builder().negative().seconds(59).build());
+        assert_parse_time("-01:00", Time::builder().negative().minutes(1).build());
+        assert_parse_time("-59:00", Time::builder().negative().minutes(59).build());
+        assert_parse_time("-01:00:00", Time::builder().negative().hours(1).build());
+        assert_parse_time("-59:00:00", Time::builder().negative().hours(59).build());
+        assert_parse_time("-11.22s", Time::builder().negative().seconds(11).nanoseconds(220000000).build());
+        assert_parse_time("-11:22", Time::builder().negative().minutes(11).seconds(22).build());
+        assert_parse_time("-11:22:33.456789", Time::builder().negative().hours(11).minutes(22).seconds(33).nanoseconds(456789000).build());
     }
 
     #[test]
@@ -495,6 +512,10 @@ mod tests {
         assert!(parse_time("-12").is_err());
         assert!(parse_time("-:34:56").is_err());
         assert!(parse_time("-12::56").is_err());
+
+        // Too many components.
+        assert!(parse_time("10:20:30:40").is_err());
+        assert!(parse_time("10:20:30:40:50.60").is_err());
 
         // Trailing decimal.
         assert!(parse_time("12:34:56.").is_err());
@@ -511,6 +532,12 @@ mod tests {
         assert!(parse_time("00:8:00").is_err());
         assert!(parse_time("00:60:00").is_err());
         assert!(parse_time("00:99:00").is_err());
+
+        // Invalid seconds identifier.
+        assert!(parse_time("1.2s4").is_err());
+        assert!(parse_time("24:35s").is_err());
+        assert!(parse_time("54:32.4s").is_err());
+        assert!(parse_time("s4").is_err());
 
         // Invalid tokens.
         assert!(parse_time("00.00:00").is_err());
