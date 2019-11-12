@@ -11,6 +11,7 @@ pub enum Token {
     Number(String),
     Colon,
     FullStop,
+    S,
 }
 
 impl fmt::Display for Token {
@@ -20,6 +21,7 @@ impl fmt::Display for Token {
             Token::Number(n) => n.clone(),
             Token::Colon => String::from(":"),
             Token::FullStop => String::from("."),
+            Token::S => String::from("s"),
         };
 
         write!(f, "{}", t)
@@ -91,6 +93,7 @@ impl<'a> Lexer<'a> {
             Option::Some('-') => Token::Hyphen,
             Option::Some(':') => Token::Colon,
             Option::Some('.') => Token::FullStop,
+            Option::Some('s') => Token::S,
             Option::Some(c) => return Result::Err(LexError::UnexpectedCharacter(c)),
             Option::None => return Result::Err(LexError::EndOfInput),
         };
@@ -115,18 +118,18 @@ struct Parser {
 #[derive(Debug)]
 pub enum ParseError {
     LexError(Vec<LexError>),
-    ExpectedHours(Option<Token>),
-    ExpectedMinutes(Option<Token>),
-    ExpectedSeconds(Option<Token>),
-    ExpectedNanoseconds(Option<Token>),
-    ExpectedPeriod(Option<Token>),
-    ExpectedColon(Option<Token>),
-    ExpectedTwoDigitMinutes(Option<Token>),
-    ExpectedTwoDigitSeconds(Option<Token>),
-    SecondsOutOfRange(Option<Token>),
-    MinutesOutOfRange(Option<Token>),
-    FractionalSecondsTooLarge(Option<Token>),
+    ExpectedNumber(Option<Token>),
+    ExceededMaxComponents,
+    ExpectedNumberAfterDecimal(Option<Token>),
+    ExpectedSecondsIdentifier,
+    UnexpectedSecondsIdentifier,
+    ExpectedTwoDigitMinutes(String),
+    ExpectedTwoDigitSeconds(String),
+    SecondsOutOfRange(u8),
+    MinutesOutOfRange(u8),
+    FractionalSecondsTooLarge(String),
     ExpectedEndOfInputOrFraction(Option<Token>),
+    ExpectedEndOfInput(Token),
 }
 
 impl std::convert::From<Vec<LexError>> for ParseError {
@@ -141,115 +144,125 @@ impl Parser {
     }
 
     fn parse(self) -> Result<Time, ParseError> {
-        let mut time_builder = Time::builder();
         let mut token_iter = self.tokens.into_iter().peekable();
 
         // Only consume first token if it is a hyphen, indicating a negative time.
-        if token_iter.peek() == Option::Some(&Token::Hyphen) {
+        let is_negative = if token_iter.peek() == Option::Some(&Token::Hyphen) {
             token_iter.next();
+            true
+        }
+        else {
+            false
+        };
+
+        // Read numbers, separated by colons.
+        let mut components = Vec::new();
+        loop {
+            match token_iter.next() {
+                Option::Some(Token::Number(n)) => components.push(n),
+                t => return Result::Err(ParseError::ExpectedNumber(t)),
+            }
+            match token_iter.peek() {
+                Option::Some(Token::Colon) => {token_iter.next();},
+                _ => break,
+            }
+        }
+        // If we reach this point, we must have consumed at least one number from tokens so we don't
+        // need to check for `components.len() == 0`.
+        if components.len() > 3 {
+            return Result::Err(ParseError::ExceededMaxComponents)
+        }
+
+        // Consume fractional seconds.
+        let fraction = if let Option::Some(&Token::FullStop) = token_iter.peek() {
+            // Consume full stop.
+            token_iter.next();
+
+            // Consume number.
+            match token_iter.next() {
+                Option::Some(Token::Number(n)) => Option::Some(n.to_string()),
+                t => return Result::Err(ParseError::ExpectedNumberAfterDecimal(t)),
+            }
+        }
+        else {
+            Option::None
+        };
+
+        // Consume 's'.
+        let is_seconds = if token_iter.peek() == Option::Some(&Token::S) {
+            token_iter.next();
+            true
+        }
+        else {
+            false
+        };
+
+        // We've consumed everything we understand.
+        if let Option::Some(t) = token_iter.peek() {
+            return Result::Err(ParseError::ExpectedEndOfInput(t.clone()))
+        }
+
+        if is_seconds && components.len() != 1 {
+            return Result::Err(ParseError::UnexpectedSecondsIdentifier);
+        }
+        if !is_seconds && components.len() == 1 {
+            return Result::Err(ParseError::ExpectedSecondsIdentifier);
+        }
+
+        // Construct time.
+        let mut time_builder = Time::builder();
+
+        if is_negative {
             time_builder.negative();
         }
 
-        match token_iter.next() {
-            Option::Some(Token::Number(n)) => {
-                time_builder.hours(n.parse().unwrap());
-            }
-            Option::Some(t) => return Result::Err(ParseError::ExpectedHours(Option::Some(t))),
-            Option::None => return Result::Err(ParseError::ExpectedHours(Option::None)),
+        // Hours.
+        if components.len() >= 3 {
+            let h = components[0].to_string();
+            time_builder.hours(h.parse().unwrap());
         }
-        match token_iter.next() {
-            Option::Some(Token::Colon) => (),
-            Option::Some(t) => return Result::Err(ParseError::ExpectedColon(Option::Some(t))),
-            Option::None => return Result::Err(ParseError::ExpectedColon(Option::None)),
-        }
+        // Minutes
+        if components.len() >= 2 {
+            let m = components[
+                if components.len() == 2 { 0 }
+                else { 1 }
+            ].to_string();
 
-        match token_iter.next() {
-            Option::Some(Token::Number(n)) => {
-                if let Result::Ok(minutes) = n.parse() {
-                    if n.len() != 2 {
-                        return Result::Err(ParseError::ExpectedTwoDigitMinutes(Option::Some(
-                            Token::Number(n),
-                        )));
-                    }
-                    if minutes < 60 {
-                        time_builder.minutes(minutes);
-                    } else {
-                        return Result::Err(ParseError::MinutesOutOfRange(Option::Some(
-                            Token::Number(n),
-                        )));
-                    }
-                } else {
-                    return Result::Err(ParseError::ExpectedMinutes(Option::Some(Token::Number(
-                        n,
-                    ))));
-                }
-                // time_builder.minutes(n.parse().unwrap());
+            if m.len() != 2 {
+                return Result::Err(ParseError::ExpectedTwoDigitMinutes(m));
             }
-            Option::Some(t) => return Result::Err(ParseError::ExpectedMinutes(Option::Some(t))),
-            Option::None => return Result::Err(ParseError::ExpectedMinutes(Option::None)),
+            let minutes = m.parse().unwrap();
+            if minutes >= 60 {
+                return Result::Err(ParseError::MinutesOutOfRange(minutes));
+            }
+            time_builder.minutes(minutes);
         }
-        match token_iter.next() {
-            Option::Some(Token::Colon) => (),
-            Option::Some(t) => return Result::Err(ParseError::ExpectedColon(Option::Some(t))),
-            Option::None => return Result::Err(ParseError::ExpectedColon(Option::None)),
+        // Seconds
+        if components.len() >= 1 {
+            let s = components[
+                if components.len() == 1 { 0 }
+                else if components.len() == 2 { 1 }
+                else { 2 }
+            ].to_string();
+
+            if s.len() != 2 && !is_seconds {
+                return Result::Err(ParseError::ExpectedTwoDigitSeconds(s));
+            }
+            let seconds = s.parse().unwrap();
+            if seconds >= 60 {
+                return Result::Err(ParseError::SecondsOutOfRange(seconds));
+            }
+            time_builder.seconds(seconds);
         }
-
-        match token_iter.next() {
-            Option::Some(Token::Number(n)) => {
-                if let Result::Ok(seconds) = n.parse() {
-                    if n.len() != 2 {
-                        return Result::Err(ParseError::ExpectedTwoDigitSeconds(Option::Some(
-                            Token::Number(n),
-                        )));
-                    }
-                    if seconds < 60 {
-                        time_builder.seconds(seconds);
-                    } else {
-                        return Result::Err(ParseError::SecondsOutOfRange(Option::Some(
-                            Token::Number(n),
-                        )));
-                    }
-                } else {
-                    return Result::Err(ParseError::ExpectedSeconds(Option::Some(Token::Number(
-                        n,
-                    ))));
-                }
-                // time_builder.seconds(n.parse().unwrap());
+        // Nanoseconds
+        if let Option::Some(mut ns) = fraction {
+            if ns.len() > 9 {
+                return Result::Err(ParseError::FractionalSecondsTooLarge(ns.to_string()));
             }
-            Option::Some(t) => return Result::Err(ParseError::ExpectedSeconds(Option::Some(t))),
-            Option::None => return Result::Err(ParseError::ExpectedSeconds(Option::None)),
-        }
-
-        match token_iter.peek() {
-            Option::Some(&Token::FullStop) => {
-                token_iter.next();
-                match token_iter.next() {
-                    Option::Some(Token::Number(mut n)) => {
-                        if n.len() > 9 {
-                            return Result::Err(ParseError::FractionalSecondsTooLarge(
-                                Option::Some(Token::Number(n)),
-                            ));
-                        }
-                        while n.len() < 9 {
-                            n.push('0');
-                        }
-
-                        time_builder.nanoseconds(n.parse().unwrap());
-                    }
-                    Option::Some(t) => {
-                        return Result::Err(ParseError::ExpectedNanoseconds(Option::Some(t)))
-                    }
-                    Option::None => {
-                        return Result::Err(ParseError::ExpectedNanoseconds(Option::None))
-                    }
-                }
+            while ns.len() < 9 {
+                ns.push('0');
             }
-            Option::Some(t) => {
-                return Result::Err(ParseError::ExpectedEndOfInputOrFraction(Option::Some(
-                    t.clone(),
-                )))
-            }
-            Option::None => (),
+            time_builder.nanoseconds(ns.parse().unwrap());
         }
 
         Result::Ok(time_builder.build())
@@ -414,9 +427,23 @@ mod tests {
     #[test]
     fn parse_time_valid() {
         // Zero.
+        assert_parse_time("0s", Time::builder().build());
+        assert_parse_time("00s", Time::builder().build());
+        assert_parse_time("0.0s", Time::builder().build());
+        assert_parse_time("0.000000000s", Time::builder().build());
+        assert_parse_time("00:00", Time::builder().build());
+        assert_parse_time("00:00.0", Time::builder().build());
+        assert_parse_time("00:00.000000000", Time::builder().build());
         assert_parse_time("0:00:00", Time::builder().build());
         assert_parse_time("0:00:00.0", Time::builder().build());
         assert_parse_time("00:00:00.000000000", Time::builder().build());
+        assert_parse_time("-0s", Time::builder().build());
+        assert_parse_time("-00s", Time::builder().build());
+        assert_parse_time("-0.0s", Time::builder().build());
+        assert_parse_time("-0.000000000s", Time::builder().build());
+        assert_parse_time("-00:00", Time::builder().build());
+        assert_parse_time("-00:00.0", Time::builder().build());
+        assert_parse_time("-00:00.000000000", Time::builder().build());
         assert_parse_time("-0:00:00", Time::builder().build());
         assert_parse_time("-0:00:00.0", Time::builder().build());
         assert_parse_time("-00:00:00.000000000", Time::builder().build());
@@ -440,6 +467,20 @@ mod tests {
         assert_parse_time("12:34:56", Time::builder().hours(12).minutes(34).seconds(56).build());
         assert_parse_time("98765:43:21", Time::builder().hours(98765).minutes(43).seconds(21).build());
         assert_parse_time("19:28:37.465", Time::builder().hours(19).minutes(28).seconds(37).nanoseconds(465000000).build());
+
+        // Seconds only.
+        assert_parse_time("1s", Time::builder().seconds(1).build());
+        assert_parse_time("59s", Time::builder().seconds(59).build());
+        assert_parse_time("1.000000001s", Time::builder().seconds(1).nanoseconds(1).build());
+        assert_parse_time("59.999999999s", Time::builder().seconds(59).nanoseconds(999999999).build());
+
+        // Mintues and seconds only.
+        assert_parse_time("00:01", Time::builder().seconds(1).build());
+        assert_parse_time("00:59", Time::builder().seconds(59).build());
+        assert_parse_time("01:00", Time::builder().minutes(1).build());
+        assert_parse_time("59:00", Time::builder().minutes(59).build());
+        assert_parse_time("59:59", Time::builder().minutes(59).seconds(59).build());
+        assert_parse_time("12:34.56789", Time::builder().minutes(12).seconds(34).nanoseconds(567890000).build());
     }
 
     #[test]
@@ -448,12 +489,10 @@ mod tests {
         assert!(parse_time("").is_err());
         assert!(parse_time("12").is_err());
         assert!(parse_time("12:").is_err());
-        assert!(parse_time("12:34").is_err());
         assert!(parse_time("12:34:").is_err());
         assert!(parse_time(":34:56").is_err());
         assert!(parse_time("12::56").is_err());
         assert!(parse_time("-12").is_err());
-        assert!(parse_time("-12:34").is_err());
         assert!(parse_time("-:34:56").is_err());
         assert!(parse_time("-12::56").is_err());
 

@@ -134,19 +134,19 @@ mod tests {
 
     #[test]
     fn eval_numbers_only() {
-        assert_eval("2468.13579n", EvalResult::Number(dec!(2468.13579)));
+        assert_eval("2468.13579", EvalResult::Number(dec!(2468.13579)));
 
-        assert_eval("1n + 2n", EvalResult::Number(dec!(3)));
-        assert_eval("3n-4n", EvalResult::Number(dec!(-1)));
-        assert_eval("5n * -6n", EvalResult::Number(dec!(-30)));
-        assert_eval("-7.7n/-8.8n", EvalResult::Number(dec!(0.875)));
+        assert_eval("1 + 2", EvalResult::Number(dec!(3)));
+        assert_eval("3-4", EvalResult::Number(dec!(-1)));
+        assert_eval("5 * -6", EvalResult::Number(dec!(-30)));
+        assert_eval("-7.7/-8.8", EvalResult::Number(dec!(0.875)));
 
-        assert_eval("2n + 4n * 6n", EvalResult::Number(dec!(26)));
-        assert_eval("2n + (4n * 6n)", EvalResult::Number(dec!(26)));
-        assert_eval("(2n + 4n) * 6n", EvalResult::Number(dec!(36)));
-        assert_eval("-1n - 3n / 6n * 7n + 9n", EvalResult::Number(dec!(4.5)));
-        assert_eval("(-1n - 3n / 6n) * (7n + 9n)", EvalResult::Number(dec!(-24)));
-        assert_eval("1n / -2n * -(3n-4n) - (5n * 6n + 7n) + 8n*9n", EvalResult::Number(dec!(34.5)));
+        assert_eval("2 + 4 * 6", EvalResult::Number(dec!(26)));
+        assert_eval("2 + (4 * 6)", EvalResult::Number(dec!(26)));
+        assert_eval("(2 + 4) * 6", EvalResult::Number(dec!(36)));
+        assert_eval("-1 - 3 / 6 * 7 + 9", EvalResult::Number(dec!(4.5)));
+        assert_eval("(-1 - 3 / 6) * (7 + 9)", EvalResult::Number(dec!(-24)));
+        assert_eval("1 / -2 * -(3-4) - (5 * 6 + 7) + 8*9", EvalResult::Number(dec!(34.5)));
     }
 
     #[test]
@@ -171,37 +171,37 @@ mod tests {
             EvalResult::Time(Time::builder().minutes(30).build()));
         assert_eval("(2:22:22 / 1:11:11) + (3:33:33/1:11:11)", EvalResult::Number(dec!(5)));
 
-        assert_eval("((-(0:40:40 - 0:29:29) / 0:22:22) + 2n) * (1:00:00/0:30:00) * 0:15:15",
+        assert_eval("((-(0:40:40 - 0:29:29) / 0:22:22) + 2) * (1:00:00/0:30:00) * 0:15:15",
             EvalResult::Time(Time::builder().minutes(45).seconds(45).build()));
     }
 
     #[test]
     fn eval_numbers_and_times() {
-        assert_eval("0:30:00 * 1.5n", EvalResult::Time(Time::builder().minutes(45).build()));
-        assert_eval("2n * 1:11:11",
+        assert_eval("0:30:00 * 1.5", EvalResult::Time(Time::builder().minutes(45).build()));
+        assert_eval("2 * 1:11:11",
             EvalResult::Time(Time::builder().hours(2).minutes(22).seconds(22).build()));
-        assert_eval("12:24:48 / 2n",
+        assert_eval("12:24:48 / 2",
             EvalResult::Time(Time::builder().hours(6).minutes(12).seconds(24).build()));
 
-        assert_eval("1:00:00 + 1.5n * 0:30:00",
+        assert_eval("1:00:00 + 1.5 * 0:30:00",
             EvalResult::Time(Time::builder().hours(1).minutes(45).build()));
-        assert_eval("0:12:34 * 2n / 0:25:08", EvalResult::Number(dec!(1)));
+        assert_eval("0:12:34 * 2 / 0:25:08", EvalResult::Number(dec!(1)));
 
-        assert_eval("((24:00:00 - 4n * 2:30:00) / 14n - (1:30:00 + 0:30:00)) / -0:30:00 ",
+        assert_eval("((24:00:00 - 4 * 2:30:00) / 14 - (1:30:00 + 0:30:00)) / -0:30:00 ",
             EvalResult::Number(dec!(2)));
 
-        assert_eval("(((8:00:00 * 3n) / 6:00:00) + 10n) * (0:12:00 / 0:08:00) + 4n",
+        assert_eval("(((8:00:00 * 3) / 6:00:00) + 10) * (0:12:00 / 0:08:00) + 4",
             EvalResult::Number(dec!(25)));
     }
 
     #[test]
     fn eval_invalid() {
-        assert!(eval("1n + 0:00:02").is_err());
-        assert!(eval("0:00:30 + 4n").is_err());
-        assert!(eval("5n - 0:06:00").is_err());
-        assert!(eval("7:00:00 - 8n").is_err());
+        assert!(eval("1 + 0:00:02").is_err());
+        assert!(eval("0:00:30 + 4").is_err());
+        assert!(eval("5 - 0:06:00").is_err());
+        assert!(eval("7:00:00 - 8").is_err());
         assert!(eval("9:09:09 * 10:10:10").is_err());
-        assert!(eval("11n / 12:12:12").is_err());
+        assert!(eval("11 / 12:12:12").is_err());
     }
 
     fn assert_eval(expr: &str, result: EvalResult) {

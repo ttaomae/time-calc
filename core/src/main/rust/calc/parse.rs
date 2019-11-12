@@ -88,20 +88,25 @@ impl<'a> Lexer<'a> {
 
     fn scan_number(&mut self) -> Result<(), LexError> {
         let mut num = String::new();
+        let mut is_time = false;
         loop {
             match self.peek() {
-                Option::Some(c) if c.is_digit(10) || *c == ':' || *c == '.' => {
+                Option::Some(c) if c.is_digit(10) || *c == '.' => {
                     num.push(*c);
+                    self.next();
+                }
+                Option::Some(c) if *c == ':' || *c == 's' => {
+                    num.push(*c);
+                    is_time = true;
                     self.next();
                 }
                 _ => break,
             }
         }
-        if self.peek() == Option::Some(&'n') {
-            self.next();
-            self.tokens.push(Token::Number(num));
-        } else {
+        if is_time {
             self.tokens.push(Token::Time(num));
+        } else {
+            self.tokens.push(Token::Number(num));
         }
 
         Result::Ok(())
@@ -328,32 +333,32 @@ mod tests {
         assert_scan_tokens("00:00:00", vec![Time("00:00:00".to_string())]);
         assert_scan_tokens("00:00:00.00", vec![Time("00:00:00.00".to_string())]);
         assert_scan_tokens("00:00:00.000000000", vec![Time("00:00:00.000000000".to_string())]);
-        assert_scan_tokens("00:00:12", vec![Time("00:00:12".to_string())]);
-        assert_scan_tokens("00:12:34", vec![Time("00:12:34".to_string())]);
+        assert_scan_tokens("12s", vec![Time("12s".to_string())]);
+        assert_scan_tokens("12:34", vec![Time("12:34".to_string())]);
         assert_scan_tokens("12:34:56", vec![Time("12:34:56".to_string())]);
         assert_scan_tokens("12:34:56.789", vec![Time("12:34:56.789".to_string())]);
 
         // Invalid time.
-        assert_scan_tokens("00", vec![Time("00".to_string())]);
-        assert_scan_tokens("00.00", vec![Time("00.00".to_string())]);
         assert_scan_tokens("00:00", vec![Time("00:00".to_string())]);
         assert_scan_tokens("00:00.00", vec![Time("00:00.00".to_string())]);
-
         assert_scan_tokens("60:60:60", vec![Time("60:60:60".to_string())]);
-        assert_scan_tokens("98.76.54.321", vec![Time("98.76.54.321".to_string())]);
+        assert_scan_tokens("123:456:789", vec![Time("123:456:789".to_string())]);
+        assert_scan_tokens("123.456:789", vec![Time("123.456:789".to_string())]);
+        assert_scan_tokens("123:456.789", vec![Time("123:456.789".to_string())]);
+
 
         // Valid numbers.
-        assert_scan_tokens("0n", vec![Number(0.to_string())]);
-        assert_scan_tokens("5n", vec![Number(5.to_string())]);
-        assert_scan_tokens("9n", vec![Number(9.to_string())]);
-        assert_scan_tokens("13579n", vec![Number(13579.to_string())]);
-        assert_scan_tokens("13579.02468n", vec![Number(13579.02468.to_string())]);
+        assert_scan_tokens("0", vec![Number(0.to_string())]);
+        assert_scan_tokens("5", vec![Number(5.to_string())]);
+        assert_scan_tokens("9", vec![Number(9.to_string())]);
+        assert_scan_tokens("00", vec![Number("00".to_string())]);
+        assert_scan_tokens("00.00", vec![Number("00.00".to_string())]);
+        assert_scan_tokens("13579", vec![Number(13579.to_string())]);
+        assert_scan_tokens("13579.02468", vec![Number(13579.02468.to_string())]);
 
         // Invalid numbers.
-        assert_scan_tokens("123.456.789n", vec![Number("123.456.789".to_string())]);
-        assert_scan_tokens("123:456:789n", vec![Number("123:456:789".to_string())]);
-        assert_scan_tokens("123.456:789n", vec![Number("123.456:789".to_string())]);
-        assert_scan_tokens("123:456.789n", vec![Number("123:456.789".to_string())]);
+        assert_scan_tokens("123.456.789", vec![Number("123.456.789".to_string())]);
+        assert_scan_tokens("98.76.54.321", vec![Number("98.76.54.321".to_string())]);
     }
 
     #[test]
@@ -365,7 +370,7 @@ mod tests {
         assert_scan_tokens("*+/-", vec![Asterisk, Plus, Slash, Hyphen]);
 
         // Valid expressions.
-        assert_scan_tokens("-123n", vec![Hyphen, Number("123".to_string())]);
+        assert_scan_tokens("-123", vec![Hyphen, Number("123".to_string())]);
         assert_scan_tokens("-97:53:10.2468", vec![Hyphen, Time("97:53:10.2468".to_string())]);
         assert_scan_tokens("11:11:11 + 11:11:11",
             vec![Time("11:11:11".to_string()), Plus, Time("11:11:11".to_string())]);
@@ -375,7 +380,7 @@ mod tests {
             vec![Time("33:33:33".to_string()), Asterisk, Time("33:33:33".to_string())]);
         assert_scan_tokens("44:44:44 / 44:44:44",
             vec![Time("44:44:44".to_string()), Slash, Time("44:44:44".to_string())]);
-        assert_scan_tokens("55:55:55 / 5555.55n",
+        assert_scan_tokens("55:55:55 / 5555.55",
             vec![Time("55:55:55".to_string()), Slash, Number("5555.55".to_string())]);
 
         // Long expressions.
@@ -386,7 +391,7 @@ mod tests {
                 Time("33:33:33".to_string())
             ]
         );
-        assert_scan_tokens("111.111n + 222.222n - 333.333n * 444.444n / 555.555n",
+        assert_scan_tokens("111.111 + 222.222 - 333.333 * 444.444 / 555.555",
             vec![
                 Number("111.111".to_string()), Plus,
                 Number("222.222".to_string()), Hyphen,
@@ -395,7 +400,7 @@ mod tests {
                 Number("555.555".to_string())
             ]
         );
-        assert_scan_tokens("(11:11:11 - (22:22:22 + 33:33:33)) / 1234.5678n",
+        assert_scan_tokens("(11:11:11 - (22:22:22 + 33:33:33)) / 1234.5678",
             vec![
                 LeftParen,
                 Time("11:11:11".to_string()), Hyphen, LeftParen,
@@ -419,7 +424,7 @@ mod tests {
         assert_scan_tokens("11:22:33--", vec![Time("11:22:33".to_string()), Hyphen, Hyphen]);
         assert_scan_tokens("22:33:44 +", vec![Time("22:33:44".to_string()), Plus]);
         assert_scan_tokens("/ 33:44:55", vec![Slash, Time("33:44:55".to_string())]);
-        assert_scan_tokens("66:55:44 + 123.456n",
+        assert_scan_tokens("66:55:44 + 123.456",
             vec![Time("66:55:44".to_string()), Plus, Number("123.456".to_string())]);
         assert_scan_tokens("12:34:56 * 65:43:21",
             vec![Time("12:34:56".to_string()), Asterisk, Time("65:43:21".to_string())]);
@@ -427,7 +432,7 @@ mod tests {
 
     #[test]
     fn parse_simple_expression() {
-        assert_parse_expression("1n + 2n",
+        assert_parse_expression("1 + 2",
             Expr::Binary(
                 Box::new(Expr::Literal(Literal::Number(dec!(1)))),
                 BinaryOp::Add,
@@ -435,7 +440,7 @@ mod tests {
             )
         );
 
-        assert_parse_expression("3n - 4n",
+        assert_parse_expression("3 - 4",
             Expr::Binary(
                 Box::new(Expr::Literal(Literal::Number(dec!(3)))),
                 BinaryOp::Subtract,
@@ -443,7 +448,7 @@ mod tests {
             )
         );
 
-        assert_parse_expression("5n * 6n",
+        assert_parse_expression("5 * 6",
             Expr::Binary(
                 Box::new(Expr::Literal(Literal::Number(dec!(5)))),
                 BinaryOp::Multiply,
@@ -451,7 +456,7 @@ mod tests {
             )
         );
 
-        assert_parse_expression("7n / 8n",
+        assert_parse_expression("7 / 8",
             Expr::Binary(
                 Box::new(Expr::Literal(Literal::Number(dec!(7)))),
                 BinaryOp::Divide,
@@ -459,11 +464,11 @@ mod tests {
             )
         );
 
-        assert_parse_expression("-9n",
+        assert_parse_expression("-9",
             Expr::Unary(UnaryOp::Negative, Box::new(Expr::Literal(Literal::Number(dec!(9))))));
 
 
-        assert_parse_expression("00:00:10 + 00:00:20",
+        assert_parse_expression("10s + 00:20",
             Expr::Binary(
                 Box::new(Expr::Literal(Literal::Time(Time::builder().seconds(10).build()))),
                 BinaryOp::Add,
@@ -471,7 +476,7 @@ mod tests {
             )
         );
 
-        assert_parse_expression("00:30:00 - 00:40:00",
+        assert_parse_expression("30:00 - 00:40:00",
             Expr::Binary(
                 Box::new(Expr::Literal(Literal::Time(Time::builder().minutes(30).build()))),
                 BinaryOp::Subtract,
@@ -479,7 +484,7 @@ mod tests {
             )
         );
 
-        assert_parse_expression("5:00:00 * 123.456n",
+        assert_parse_expression("5:00:00 * 123.456",
             Expr::Binary(
                 Box::new(Expr::Literal(Literal::Time(Time::builder().hours(5).build()))),
                 BinaryOp::Multiply,
@@ -495,7 +500,7 @@ mod tests {
             )
         );
 
-        assert_parse_expression("8:08:08 / 987.654n",
+        assert_parse_expression("8:08:08 / 987.654",
             Expr::Binary(
                 Box::new(Expr::Literal(Literal::Time(Time::builder().hours(8).minutes(8).seconds(8).build()))),
                 BinaryOp::Divide,
@@ -515,7 +520,7 @@ mod tests {
 
     #[test]
     fn parse_complex_expression() {
-        assert_parse_expression("1n+2n*3n-4n/5n",
+        assert_parse_expression("1+2*3-4/5",
             Expr::Binary(
                 Box::new(Expr::Binary(
                     Box::new(Expr::Literal(Literal::Number(dec!(1)))),
@@ -535,7 +540,7 @@ mod tests {
             )
         );
 
-        assert_parse_expression("1:00:00 - 0:22:22 / 0:30:00 * 4:04:04 + 5:55:55",
+        assert_parse_expression("1:00:00 - 22:22 / 30:00 * 4:04:04 + 5:55:55",
             Expr::Binary(
                 Box::new(Expr::Binary(
                     Box::new(Expr::Literal(Literal::Time(
@@ -566,7 +571,7 @@ mod tests {
         );
 
         assert_parse_expression(
-            "((-10:10:10 + 0:22:22) * -(3.33n / -4.44n)) - (5:00:00 + -0:06:06) / 7.77n",
+            "((-10:10:10 + 22:22) * -(3.33 / -4.44)) - (5:00:00 + -0:06:06) / 7.77",
             Expr::Binary(
                 Box::new(Expr::Binary(
                     Box::new(Expr::Binary(
@@ -617,12 +622,12 @@ mod tests {
 
     #[test]
     fn parse_invalid() {
-        assert!(parse_expression("+ 1n").is_err());
+        assert!(parse_expression("+ 1").is_err());
         assert!(parse_expression("20:00:02 -").is_err());
-        assert!(parse_expression("(3n * 4n").is_err());
+        assert!(parse_expression("(3 * 4").is_err());
         assert!(parse_expression("5:55:55 / 6:06:06 +").is_err());
-        assert!(parse_expression("7n + 8:08:08 )").is_err());
-        assert!(parse_expression("0:09:09 * 10n ) + 11:11:11").is_err());
+        assert!(parse_expression("7 + 8:08:08 )").is_err());
+        assert!(parse_expression("0:09:09 * 10 ) + 11:11:11").is_err());
     }
 
     fn assert_scan_tokens(input: &str, tokens: Vec<Token>) {
