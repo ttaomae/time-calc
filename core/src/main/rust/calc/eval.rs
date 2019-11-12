@@ -10,7 +10,7 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
 impl Expr {
-    fn accept<T>(&self, visitor: &ExprVisitor<Result = T>) -> T {
+    fn accept<T>(&self, visitor: &dyn ExprVisitor<Result = T>) -> T {
         match *self {
             Expr::Literal(_) => visitor.visit_literal(self),
             Expr::Unary(_, _) => visitor.visit_unary(self),
