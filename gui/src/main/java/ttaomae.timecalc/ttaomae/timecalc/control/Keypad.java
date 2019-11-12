@@ -55,9 +55,6 @@ public class Keypad extends Control
          */
         public char charValue()
         {
-            if (this == NUMBER_SIGN) {
-                return 'n';
-            }
             return toStringValue.charAt(0);
         }
 

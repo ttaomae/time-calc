@@ -26,7 +26,7 @@ public class ExpressionFormatter
 
     public String inputCharacter(char ch)
     {
-        if (charIsDigit(ch) || ch == '.' || ch == 'n') {
+        if (charIsDigit(ch) || ch == '.' || ch == '#') {
             inputDigit(ch);
         }
         else if (charIsOperator(ch)) {
@@ -41,7 +41,7 @@ public class ExpressionFormatter
 
     private void inputDigit(char ch)
     {
-        assert charIsDigit(ch) || ch == '.' || ch == 'n';
+        assert charIsDigit(ch) || ch == '.' || ch == '#';
 
         // If empty, pick an arbitrary operator so that empty is handled the same as operators.
         Token lastToken = getLastToken().orElse(Token.operator('+'));

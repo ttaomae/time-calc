@@ -25,7 +25,7 @@ public class ValueFormatter
 
     public String inputCharacter(char ch)
     {
-        if (ch == 'n') {
+        if (ch == '#') {
             toggleType();
         }
         else if (ch == '.' && this.currentState == State.WHOLE) {
@@ -70,18 +70,36 @@ public class ValueFormatter
     public String toString() {
         var result = new StringBuilder();
 
+        var nDigits = wholeInput.length();
         if (currentType == Type.TIME) {
-            var nDigits = wholeInput.length();
-            // Construct h:mm:ss from input.
-            // Must be at least 5 digits, so iterate from negative index if necessary.
-            for (int i = Math.min(0, nDigits - 5); i < nDigits; i++) {
-                // Add colon separator before last 2 and last 4 digits.
-                if (nDigits - i == 2 || nDigits - i == 4)  {
-                    result.append(':');
-                }
-                // Use '0' if we need extra digits.
-                if (i < 0) result.append('0');
-                else result.append(wholeInput.charAt(i));
+            // Hours.
+            if (nDigits >= 5) {
+                result.append(wholeInput.substring(0, nDigits - 4))
+                        .append(':');
+            }
+            // Two minute digits.
+            if (nDigits >= 4) {
+                result.append(wholeInput.substring(nDigits - 4, nDigits - 2))
+                        .append(':');
+            }
+            // One minute digit.
+            else if (nDigits == 3) {
+                result.append('0')
+                        .append(wholeInput.substring(nDigits - 3, nDigits - 2))
+                        .append(':');
+            }
+            // Two digit seconds.
+            if (nDigits >= 2) {
+                result.append(wholeInput.substring(nDigits - 2, nDigits));
+            }
+            // One digit seconds.
+            else if (nDigits == 1) {
+                result.append(wholeInput);
+            }
+
+            // Zero if no whole input.
+            if (nDigits == 0) {
+                result.append('0');
             }
         }
         else if (currentType == Type.NUMBER) {
@@ -97,8 +115,10 @@ public class ValueFormatter
             else result.append(fractionInput);
         }
 
-        // Append 'n' suffix used to identify numbers.
-        if (currentType == Type.NUMBER) result.append('n');
+        // Append 's' for time with seconds only.
+        if (currentType == Type.TIME && nDigits <= 2) {
+            result.append('s');
+        }
 
         return result.toString();
     }
