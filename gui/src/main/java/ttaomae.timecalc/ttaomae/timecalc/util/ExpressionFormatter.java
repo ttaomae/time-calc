@@ -6,6 +6,8 @@ import java.util.Optional;
 
 public class ExpressionFormatter
 {
+    public static final char TOGGLE_TYPE_CHARACTER = ValueFormatter.TOGGLE_TYPE_CHARACTER;
+
     private final ValueFormatter valueFormatter;
     private final List<Token> tokens;
     private int nUnclosedParentheses;
@@ -26,7 +28,7 @@ public class ExpressionFormatter
 
     public String inputCharacter(char ch)
     {
-        if (charIsDigit(ch) || ch == '.' || ch == '#') {
+        if (charIsDigit(ch) || ch == '.' || ch == TOGGLE_TYPE_CHARACTER) {
             inputDigit(ch);
         }
         else if (charIsOperator(ch)) {
@@ -41,7 +43,7 @@ public class ExpressionFormatter
 
     private void inputDigit(char ch)
     {
-        assert charIsDigit(ch) || ch == '.' || ch == '#';
+        assert charIsDigit(ch) || ch == '.' || ch == TOGGLE_TYPE_CHARACTER;
 
         // If empty, pick an arbitrary operator so that empty is handled the same as operators.
         Token lastToken = getLastToken().orElse(Token.operator('+'));
@@ -104,6 +106,22 @@ public class ExpressionFormatter
         }
     }
 
+    public String deleteCharacter()
+    {
+        getLastToken().ifPresent(this::deleteCharacter);
+        return toString();
+    }
+
+    private void deleteCharacter(Token lastToken)
+    {
+        var tokenIsNonEmptyValue = lastToken.type == Token.Type.VALUE && !valueFormatter.isEmpty();
+
+        // If last token is non-empty value, delete character from value and update last token.
+        if (tokenIsNonEmptyValue) setLastToken(Token.value(valueFormatter.deleteCharacter()));
+        // Otherwise just remove token.
+        else removeLastToken();
+    }
+
     private Optional<Token> getLastToken()
     {
         if (tokens.size() == 0) {
@@ -120,6 +138,13 @@ public class ExpressionFormatter
 
         int lastIndex = tokens.size() - 1;
         tokens.set(lastIndex, token);
+    }
+
+    private void removeLastToken()
+    {
+        assert tokens.size() > 0;
+
+        tokens.remove(tokens.size() - 1);
     }
 
     @Override

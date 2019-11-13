@@ -2,6 +2,8 @@ package ttaomae.timecalc.util;
 
 public class ValueFormatter
 {
+    public static final char TOGGLE_TYPE_CHARACTER = '#';
+
     private Type currentType;
     private State currentState;
     private StringBuilder wholeInput;
@@ -25,7 +27,7 @@ public class ValueFormatter
 
     public String inputCharacter(char ch)
     {
-        if (ch == '#') {
+        if (ch == TOGGLE_TYPE_CHARACTER) {
             toggleType();
         }
         else if (ch == '.' && this.currentState == State.WHOLE) {
@@ -64,6 +66,30 @@ public class ValueFormatter
     private static boolean charIsDigit(char ch)
     {
         return ch >= '0' && ch <= '9';
+    }
+
+    public String deleteCharacter()
+    {
+        switch (currentState) {
+            case FRACTION:
+                var fractionLength = fractionInput.length();
+                // Delete last digit of fraction component.
+                if (fractionLength > 0) fractionInput.deleteCharAt(fractionLength - 1);
+                    // Deleted all of fraction component. Change state to WHOLE.
+                else currentState = State.WHOLE;
+                break;
+            case WHOLE:
+                var wholeLength = wholeInput.length();
+                // Delete last digit of whole component.
+                if (wholeLength > 0) wholeInput.deleteCharAt(wholeLength - 1);
+                break;
+        }
+        return toString();
+    }
+
+    boolean isEmpty()
+    {
+        return wholeInput.length() == 0 & fractionInput.length() == 0;
     }
 
     @Override
