@@ -26,15 +26,41 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
         <version>1.6.0</version>
+        <configuration>
+          <executable>cargo</executable>
+        </configuration>
         <executions>
           <execution>
-            <phase>generate-sources</phase>
+            <id>cargo-build</id>
+            <phase>test</phase>
             <goals>
               <goal>exec</goal>
             </goals>
             <configuration>
-              <workingDirectory>core</workingDirectory>
-              <executable>cargo</executable>
+              <arguments>
+                <argument>build</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>cargo-test</id>
+            <phase>test</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <arguments>
+                <argument>test</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>cargo-build-release</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
               <arguments>
                 <argument>build</argument>
                 <argument>--release</argument>
@@ -49,7 +75,7 @@
         <executions>
           <execution>
             <id>copy-resources</id>
-            <phase>generate-resources</phase>
+            <phase>prepare-package</phase>
             <goals>
               <goal>copy-resources</goal>
             </goals>
