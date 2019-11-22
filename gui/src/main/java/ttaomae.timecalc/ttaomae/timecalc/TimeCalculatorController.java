@@ -63,10 +63,28 @@ public class TimeCalculatorController
     private void evaluate()
     {
         formatter.clear();
+        // Move answer into input. Start by assuming it is a number.
+        formatter.inputCharacter(ExpressionFormatter.TOGGLE_TYPE_CHARACTER);
+        var isTime = false;
         for (char ch : display.getResultText().toCharArray()) {
+            // It is a time if there is a colon or s.
+            if (ch == ':' || ch == 's') isTime = true;
             formatter.inputCharacter(ch);
         }
+        // Toggle type back to time.
+        if (isTime) formatter.inputCharacter(ExpressionFormatter.TOGGLE_TYPE_CHARACTER);
+
         display.setInputText(formatter.toString());
+    }
+
+    private void delete()
+    {
+        var expression = formatter.deleteCharacter();
+        display.setInputText(expression);
+        var result = evalutor.evaluate(expression);
+        if (result.isSuccess()) {
+            display.setResultText(result.getValue().get());
+        }
     }
 
     private void evaluate(Keypad.Key key)
@@ -88,6 +106,8 @@ public class TimeCalculatorController
             case EQUALS:
                 evaluate();
                 break;
+            case DELETE:
+                delete();
             default:
                 evaluate(key);
                 break;

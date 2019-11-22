@@ -38,6 +38,7 @@ public class Keypad extends Control
         NUMBER_SIGN("#"),
         LEFT_PAREN("("),
         RIGHT_PAREN(")"),
+        DELETE("⌫"),
         CLEAR("C");
 
         private final String toStringValue;
@@ -67,6 +68,7 @@ public class Keypad extends Control
             switch (keyCode) {
                 case ESCAPE: return Optional.of(Key.CLEAR);
                 case ENTER: return Optional.of(Key.EQUALS);
+                case BACK_SPACE: return Optional.of(Key.DELETE);
             }
 
             return Optional.empty();
