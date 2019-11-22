@@ -172,6 +172,8 @@ struct Parser<'a> {
 #[derive(Debug)]
 pub(crate) enum ParseError {
     LexError(Vec<LexError>),
+    InvalidTime(String),
+    InvalidNumber(String),
     LeftoverTokens(Vec<Token>),
     ExpectedRightParen(Option<Token>),
     ExpectedLiteral(Option<Token>),
@@ -255,12 +257,16 @@ impl<'a> Parser<'a> {
     fn value(&mut self) -> Result<Expr, ParseError> {
         match self.next() {
             Option::Some(Token::Number(n)) => {
-                let num = Decimal::from_str(n).unwrap();
-                Result::Ok(Expr::Literal(Literal::Number(num)))
+                match Decimal::from_str(n) {
+                    Result::Ok(number) => Result::Ok(Expr::Literal(Literal::Number(number))),
+                    Result::Err(_) => Result::Err(ParseError::InvalidNumber(n.to_string())),
+                }
             }
             Option::Some(Token::Time(t)) => {
-                let time = Time::from_str(t).unwrap();
-                Result::Ok(Expr::Literal(Literal::Time(time)))
+                match Time::from_str(t) {
+                    Result::Ok(time) => Result::Ok(Expr::Literal(Literal::Time(time))),
+                    Result::Err(_) => Result::Err(ParseError::InvalidTime(t.to_string())),
+                }
             }
             Option::Some(Token::LeftParen) => {
                 let expr = self.expression();
@@ -628,6 +634,9 @@ mod tests {
         assert!(parse_expression("5:55:55 / 6:06:06 +").is_err());
         assert!(parse_expression("7 + 8:08:08 )").is_err());
         assert!(parse_expression("0:09:09 * 10 ) + 11:11:11").is_err());
+        assert!(parse_expression("0.1234567890s + 1:23:45").is_err());
+        assert!(parse_expression("56:34 - 2:3:4").is_err());
+        assert!(parse_expression("9.8.7 / 6").is_err());
     }
 
     fn assert_scan_tokens(input: &str, tokens: Vec<Token>) {

@@ -7,6 +7,7 @@ use crate::calc::parse::UnaryOp;
 use crate::time::Time;
 
 use rust_decimal::Decimal;
+use rust_decimal::RoundingStrategy;
 use rust_decimal_macros::dec;
 
 impl Expr {
@@ -77,15 +78,15 @@ impl ExprVisitor for ExprEvaluator {
 
                 match (r1, r2) {
                     (EvalResult::Number(n1), EvalResult::Number(n2)) => match op {
-                        BinaryOp::Add => Result::Ok(EvalResult::Number(n1 + n2)),
-                        BinaryOp::Subtract => Result::Ok(EvalResult::Number(n1 - n2)),
-                        BinaryOp::Multiply => Result::Ok(EvalResult::Number(n1 * n2)),
-                        BinaryOp::Divide => Result::Ok(EvalResult::Number(n1 / n2)),
+                        BinaryOp::Add => Result::Ok(EvalResult::Number(round_decimal(n1 + n2))),
+                        BinaryOp::Subtract => Result::Ok(EvalResult::Number(round_decimal(n1 - n2))),
+                        BinaryOp::Multiply => Result::Ok(EvalResult::Number(round_decimal(n1 * n2))),
+                        BinaryOp::Divide => Result::Ok(EvalResult::Number(round_decimal(n1 / n2))),
                     },
                     (EvalResult::Time(t1), EvalResult::Time(t2)) => match op {
                         BinaryOp::Add => Result::Ok(EvalResult::Time(t1 + t2)),
                         BinaryOp::Subtract => Result::Ok(EvalResult::Time(t1 - t2)),
-                        BinaryOp::Divide => Result::Ok(EvalResult::Number(t1 / t2)),
+                        BinaryOp::Divide => Result::Ok(EvalResult::Number(round_decimal(t1 / t2))),
                         BinaryOp::Multiply => Result::Err(EvalError::MultiplyTimes),
                     },
                     (EvalResult::Time(t), EvalResult::Number(n)) => match op {
@@ -118,6 +119,10 @@ impl ExprVisitor for ExprEvaluator {
             _ => panic!(),
         }
     }
+}
+
+fn round_decimal(decimal: Decimal) -> Decimal {
+    decimal.round_dp_with_strategy(9, RoundingStrategy::RoundHalfUp)
 }
 
 pub(in crate) fn eval(expression: &str) -> Result<EvalResult, EvalError> {
@@ -192,6 +197,15 @@ mod tests {
 
         assert_eval("(((8:00:00 * 3) / 6:00:00) + 10) * (0:12:00 / 0:08:00) + 4",
             EvalResult::Number(dec!(25)));
+    }
+
+    #[test]
+    fn eval_rounding() {
+        assert_eval("1 / 9", EvalResult::Number(dec!(0.111111111)));
+        assert_eval("1 / 6", EvalResult::Number(dec!(0.166666667)));
+        assert_eval("1 / 3", EvalResult::Number(dec!(0.333333333)));
+        assert_eval("1 / 1.8", EvalResult::Number(dec!(0.555555556)));
+        assert_eval("2 / 3", EvalResult::Number(dec!(0.666666667)));
     }
 
     #[test]
