@@ -63,16 +63,20 @@ public class TimeCalculatorController
     private void evaluate()
     {
         formatter.clear();
-        // Move answer into input. Start by assuming it is a number.
-        formatter.inputCharacter(ExpressionFormatter.TOGGLE_TYPE_CHARACTER);
-        var isTime = false;
-        for (char ch : display.getResultText().toCharArray()) {
+        var isNumber = true;
+        char[] chars = display.getResultText().toCharArray();
+        var isNegative = chars[0] == '-';
+        // Input character from output into input.
+        // All characters are input, but some may be ignored.
+        for (char ch : chars) {
             // It is a time if there is a colon or s.
-            if (ch == ':' || ch == 's') isTime = true;
+            if (ch == ':' || ch == 's') isNumber = false;
             formatter.inputCharacter(ch);
         }
-        // Toggle type back to time.
-        if (isTime) formatter.inputCharacter(ExpressionFormatter.TOGGLE_TYPE_CHARACTER);
+
+        // Convert to appropriate type and sign.
+        if (isNumber) formatter.inputCharacter(ExpressionFormatter.TOGGLE_TYPE_CHARACTER);
+        if (isNegative) formatter.inputCharacter(ExpressionFormatter.TOGGLE_SIGN_CHARACTER);
 
         display.setInputText(formatter.toString());
     }

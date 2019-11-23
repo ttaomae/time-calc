@@ -7,6 +7,7 @@ import java.util.Optional;
 public class ExpressionFormatter
 {
     public static final char TOGGLE_TYPE_CHARACTER = ValueFormatter.TOGGLE_TYPE_CHARACTER;
+    public static final char TOGGLE_SIGN_CHARACTER =  ValueFormatter.TOGGLE_SIGN_CHARACTER;
 
     private final ValueFormatter valueFormatter;
     private final List<Token> tokens;
@@ -28,7 +29,7 @@ public class ExpressionFormatter
 
     public String inputCharacter(char ch)
     {
-        if (charIsDigit(ch) || ch == '.' || ch == TOGGLE_TYPE_CHARACTER) {
+        if (charIsDigit(ch)) {
             inputDigit(ch);
         }
         else if (charIsOperator(ch)) {
@@ -43,7 +44,7 @@ public class ExpressionFormatter
 
     private void inputDigit(char ch)
     {
-        assert charIsDigit(ch) || ch == '.' || ch == TOGGLE_TYPE_CHARACTER;
+        assert charIsDigit(ch);
 
         // If empty, pick an arbitrary operator so that empty is handled the same as operators.
         Token lastToken = getLastToken().orElse(Token.operator('+'));
@@ -179,7 +180,8 @@ public class ExpressionFormatter
 
     private static boolean charIsDigit(char ch)
     {
-        return ch >= '0' && ch <= '9';
+        return (ch >= '0' && ch <= '9') || ch == '.'
+                || ch == TOGGLE_TYPE_CHARACTER || ch == TOGGLE_SIGN_CHARACTER;
     }
 
     private static boolean charIsOperator(char ch)

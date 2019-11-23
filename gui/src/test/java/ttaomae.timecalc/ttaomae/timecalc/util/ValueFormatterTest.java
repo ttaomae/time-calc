@@ -178,17 +178,18 @@ public class ValueFormatterTest
     private static void assertInputCharacter(
             String time, String number, ValueFormatter formatter, char ch)
     {
-        // Input character and check time.
-        assertEquals(time, formatter.inputCharacter(ch));
-        assertEquals(time, formatter.toString());
+        // Input character and check time, then toggle sign back and forth.
+        assertInputCharacter(time, formatter, ch);
+        assertInputCharacter("-" + time, formatter, ValueFormatter.TOGGLE_SIGN_CHARACTER);
+        assertInputCharacter(time, formatter, ValueFormatter.TOGGLE_SIGN_CHARACTER);
 
-        // Toggle to number.
-        assertEquals(number, formatter.inputCharacter(ValueFormatter.TOGGLE_TYPE_CHARACTER));
-        assertEquals(number, formatter.toString());
+        // Toggle to number then toggle sign back and forth.
+        assertInputCharacter(number, formatter, ValueFormatter.TOGGLE_TYPE_CHARACTER);
+        assertInputCharacter("-" + number, formatter, ValueFormatter.TOGGLE_SIGN_CHARACTER);
+        assertInputCharacter(number, formatter, ValueFormatter.TOGGLE_SIGN_CHARACTER);
 
         // Toggle back to time.
-        assertEquals(time, formatter.inputCharacter(ValueFormatter.TOGGLE_TYPE_CHARACTER));
-        assertEquals(time, formatter.toString());
+        assertInputCharacter(time, formatter, ValueFormatter.TOGGLE_TYPE_CHARACTER);
     }
 
     private static void assertInputAndDeleteCharacter(
@@ -196,9 +197,10 @@ public class ValueFormatterTest
     {
         String timeBefore = formatter.toString();
 
-        // Input character and check time.
-        assertEquals(time, formatter.inputCharacter(ch));
-        assertEquals(time, formatter.toString());
+        // Input character and check time, then toggle sign back and forth.
+        assertInputCharacter(time, formatter, ch);
+        assertInputCharacter("-" + time, formatter, ValueFormatter.TOGGLE_SIGN_CHARACTER);
+        assertInputCharacter(time, formatter, ValueFormatter.TOGGLE_SIGN_CHARACTER);
 
         // Delete character and check that value is the same as before inputting character.
         assertEquals(timeBefore, formatter.deleteCharacter());
@@ -208,9 +210,10 @@ public class ValueFormatterTest
         formatter.inputCharacter(ValueFormatter.TOGGLE_TYPE_CHARACTER);
         String numberBefore = formatter.toString();
 
-        // Input character and check number.
-        assertEquals(number, formatter.inputCharacter(ch));
-        assertEquals(number, formatter.toString());
+        // Input character and check number, then toggle sign back and forth.
+        assertInputCharacter(number, formatter, ch);
+        assertInputCharacter("-" + number, formatter, ValueFormatter.TOGGLE_SIGN_CHARACTER);
+        assertInputCharacter(number, formatter, ValueFormatter.TOGGLE_SIGN_CHARACTER);
 
         // Delete character and check that value is the same as before inputting character.
         assertEquals(numberBefore, formatter.deleteCharacter());
@@ -220,6 +223,12 @@ public class ValueFormatterTest
         formatter.inputCharacter(ch);
         assertEquals(time, formatter.inputCharacter(ValueFormatter.TOGGLE_TYPE_CHARACTER));
         assertEquals(time, formatter.toString());
+    }
+
+    private static void assertInputCharacter(String expected, ValueFormatter formatter, char ch)
+    {
+        assertEquals(expected, formatter.inputCharacter(ch));
+        assertEquals(expected, formatter.toString());
     }
 
     private static void assertDeleteCharacterIsEmpty(ValueFormatter formatter, boolean isEmpty)

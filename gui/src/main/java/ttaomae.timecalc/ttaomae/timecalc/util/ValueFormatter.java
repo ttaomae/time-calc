@@ -3,8 +3,10 @@ package ttaomae.timecalc.util;
 public class ValueFormatter
 {
     public static final char TOGGLE_TYPE_CHARACTER = '#';
+    public static final char TOGGLE_SIGN_CHARACTER = '±';
 
     private Type currentType;
+    private Sign currentSign;
     private State currentState;
     private StringBuilder wholeInput;
     private StringBuilder fractionInput;
@@ -12,6 +14,7 @@ public class ValueFormatter
     public ValueFormatter()
     {
         this.currentType = Type.TIME;
+        this.currentSign = Sign.POSITIVE;
         this.currentState = State.WHOLE;
         this.wholeInput = new StringBuilder();
         this.fractionInput = new StringBuilder();
@@ -30,6 +33,9 @@ public class ValueFormatter
         if (ch == TOGGLE_TYPE_CHARACTER) {
             toggleType();
         }
+        else if (ch == TOGGLE_SIGN_CHARACTER) {
+            toggleSign();
+        }
         else if (ch == '.' && this.currentState == State.WHOLE) {
             this.currentState = State.FRACTION;
         }
@@ -45,6 +51,14 @@ public class ValueFormatter
         switch (this.currentType) {
             case TIME: this.currentType = Type.NUMBER; break;
             case NUMBER: this.currentType = Type.TIME; break;
+        }
+    }
+
+    private void toggleSign()
+    {
+        switch (this.currentSign) {
+            case POSITIVE: this.currentSign = Sign.NEGATIVE; break;
+            case NEGATIVE: this.currentSign = Sign.POSITIVE; break;
         }
     }
 
@@ -95,6 +109,10 @@ public class ValueFormatter
     @Override
     public String toString() {
         var result = new StringBuilder();
+
+        if (currentSign == Sign.NEGATIVE) {
+            result.append('-');
+        }
 
         var nDigits = wholeInput.length();
         if (currentType == Type.TIME) {
@@ -152,6 +170,11 @@ public class ValueFormatter
     private enum Type
     {
         TIME, NUMBER
+    }
+
+    private enum Sign
+    {
+        POSITIVE, NEGATIVE
     }
 
     private enum State
