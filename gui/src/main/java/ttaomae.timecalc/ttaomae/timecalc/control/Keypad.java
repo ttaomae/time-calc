@@ -38,6 +38,7 @@ public class Keypad extends Control
         NUMBER_SIGN("#"),
         LEFT_PAREN("("),
         RIGHT_PAREN(")"),
+        PLUS_MINUS("±"),
         DELETE("⌫"),
         CLEAR("C");
 
@@ -154,30 +155,33 @@ public class Keypad extends Control
             var buttonGrid = new GridPane();
             buttonGrid.getStyleClass().setAll("keys");
 
-            buttonGrid.add(newButton(Key.LEFT_PAREN),  0, 0);
-            buttonGrid.add(newButton(Key.RIGHT_PAREN), 1, 0);
-            buttonGrid.add(newButton(Key.CLEAR),       2, 0);
-            buttonGrid.add(newButton(Key.DIVIDE),      3, 0);
+            buttonGrid.add(newButton(Key.CLEAR),       0, 0, 2, 1);
+            buttonGrid.add(newButton(Key.DELETE),      2, 0, 2, 1);
 
-            buttonGrid.add(newButton(Key.SEVEN),       0, 1);
-            buttonGrid.add(newButton(Key.EIGHT),       1, 1);
-            buttonGrid.add(newButton(Key.NINE),        2, 1);
-            buttonGrid.add(newButton(Key.MULTIPLY),    3, 1);
+            buttonGrid.add(newButton(Key.PLUS_MINUS),  0, 1);
+            buttonGrid.add(newButton(Key.LEFT_PAREN),  1, 1);
+            buttonGrid.add(newButton(Key.RIGHT_PAREN), 2, 1);
+            buttonGrid.add(newButton(Key.DIVIDE),      3, 1);
 
-            buttonGrid.add(newButton(Key.FOUR),        0, 2);
-            buttonGrid.add(newButton(Key.FIVE),        1, 2);
-            buttonGrid.add(newButton(Key.SIX),         2, 2);
-            buttonGrid.add(newButton(Key.SUBTRACT),    3, 2);
+            buttonGrid.add(newButton(Key.SEVEN),       0, 2);
+            buttonGrid.add(newButton(Key.EIGHT),       1, 2);
+            buttonGrid.add(newButton(Key.NINE),        2, 2);
+            buttonGrid.add(newButton(Key.MULTIPLY),    3, 2);
 
-            buttonGrid.add(newButton(Key.ONE),         0, 3);
-            buttonGrid.add(newButton(Key.TWO),         1, 3);
-            buttonGrid.add(newButton(Key.THREE),       2, 3);
-            buttonGrid.add(newButton(Key.ADD),         3, 3);
+            buttonGrid.add(newButton(Key.FOUR),        0, 3);
+            buttonGrid.add(newButton(Key.FIVE),        1, 3);
+            buttonGrid.add(newButton(Key.SIX),         2, 3);
+            buttonGrid.add(newButton(Key.SUBTRACT),    3, 3);
 
-            buttonGrid.add(newButton(Key.NUMBER_SIGN), 0, 4);
-            buttonGrid.add(newButton(Key.ZERO),        1, 4);
-            buttonGrid.add(newButton(Key.DECIMAL),     2, 4);
-            buttonGrid.add(newButton(Key.EQUALS),      3, 4);
+            buttonGrid.add(newButton(Key.ONE),         0, 4);
+            buttonGrid.add(newButton(Key.TWO),         1, 4);
+            buttonGrid.add(newButton(Key.THREE),       2, 4);
+            buttonGrid.add(newButton(Key.ADD),         3, 4);
+
+            buttonGrid.add(newButton(Key.NUMBER_SIGN), 0, 5);
+            buttonGrid.add(newButton(Key.ZERO),        1, 5);
+            buttonGrid.add(newButton(Key.DECIMAL),     2, 5);
+            buttonGrid.add(newButton(Key.EQUALS),      3, 5);
 
             getChildren().add(buttonGrid);
 
