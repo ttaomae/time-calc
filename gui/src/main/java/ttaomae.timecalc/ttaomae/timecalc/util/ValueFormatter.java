@@ -13,16 +13,15 @@ public class ValueFormatter
 
     public ValueFormatter()
     {
-        this.currentType = Type.TIME;
-        this.currentSign = Sign.POSITIVE;
-        this.currentState = State.WHOLE;
         this.wholeInput = new StringBuilder();
         this.fractionInput = new StringBuilder();
+        clear();
     }
 
     public void clear()
     {
         this.currentType = Type.TIME;
+        this.currentSign = Sign.POSITIVE;
         this.currentState = State.WHOLE;
         this.wholeInput.setLength(0);
         this.fractionInput.setLength(0);

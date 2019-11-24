@@ -175,6 +175,29 @@ public class ValueFormatterTest
         assertDeleteCharacterIsEmpty(formatter, true); // "0"
     }
 
+    @Test
+    public void testClear()
+    {
+        var formatter = new ValueFormatter();
+
+        // Change type to number. Clear, then check that type is reset to time.
+        assertEquals("1s", formatter.inputCharacter('1'));
+        assertEquals("1", formatter.inputCharacter(ValueFormatter.TOGGLE_TYPE_CHARACTER));
+        formatter.clear();
+        assertEquals("2s", formatter.inputCharacter('2'));
+
+        // Change sign to negative. Clear, then check that sign is reset to positive.
+        assertEquals("-2s", formatter.inputCharacter(ValueFormatter.TOGGLE_SIGN_CHARACTER));
+        formatter.clear();
+        assertEquals("3s", formatter.inputCharacter('3'));
+
+        // Change to decimal. Clear, then check that it is formatting whole numbers
+        assertEquals("3.0s", formatter.inputCharacter('.'));
+        assertEquals("3.4s", formatter.inputCharacter('4'));
+        formatter.clear();
+        assertEquals("5s", formatter.inputCharacter('5'));
+    }
+
     private static void assertInputCharacter(
             String time, String number, ValueFormatter formatter, char ch)
     {
