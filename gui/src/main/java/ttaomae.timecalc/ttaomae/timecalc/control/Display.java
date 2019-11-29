@@ -33,7 +33,7 @@ public class Display extends Control
         return new DisplaySkin(this);
     }
 
-    private class DisplaySkin extends SkinBase<Display>
+    private static class DisplaySkin extends SkinBase<Display>
     {
         private DisplaySkin(Display display) {
             super(display);

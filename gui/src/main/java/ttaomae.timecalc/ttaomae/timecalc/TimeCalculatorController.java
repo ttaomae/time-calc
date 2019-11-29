@@ -21,12 +21,12 @@ public class TimeCalculatorController
     @FXML private Keypad keypad;
 
     private final ExpressionFormatter formatter;
-    private final ExpressionEvalutor evalutor;
+    private final ExpressionEvalutor evaluator;
 
     public TimeCalculatorController()
     {
         formatter = new ExpressionFormatter();
-        evalutor = new TimeCalcCoreExpressionEvaluator(loadTimeCalcCore());
+        evaluator = new TimeCalcCoreExpressionEvaluator(loadTimeCalcCore());
     }
 
     private static Path loadTimeCalcCore()
@@ -40,7 +40,7 @@ public class TimeCalculatorController
             return timeCalcPath;
         }
         catch (IOException e) {
-            throw new IllegalStateException("Could not load time-calc/core executable.");
+            throw new IllegalStateException("Could not load time-calc/core executable.", e);
         }
     }
 
@@ -85,7 +85,7 @@ public class TimeCalculatorController
     {
         var expression = formatter.deleteCharacter();
         display.setInputText(expression);
-        var result = evalutor.evaluate(expression);
+        var result = evaluator.evaluate(expression);
         if (result.isSuccess()) {
             display.setResultText(result.getValue().get());
         }
@@ -95,7 +95,7 @@ public class TimeCalculatorController
     {
         String expression = formatter.inputCharacter(key.charValue());
         display.setInputText(expression);
-        var result = evalutor.evaluate(expression);
+        var result = evaluator.evaluate(expression);
         if (result.isSuccess()) {
             display.setResultText(result.getValue().get());
         }
@@ -112,6 +112,7 @@ public class TimeCalculatorController
                 break;
             case DELETE:
                 delete();
+                break;
             default:
                 evaluate(key);
                 break;

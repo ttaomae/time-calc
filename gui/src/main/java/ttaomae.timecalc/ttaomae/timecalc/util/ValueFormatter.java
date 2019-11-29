@@ -1,15 +1,18 @@
 package ttaomae.timecalc.util;
 
-public class ValueFormatter
+@SuppressWarnings("PMD.AvoidStringBufferField")
+public final class ValueFormatter
 {
     public static final char TOGGLE_TYPE_CHARACTER = '#';
     public static final char TOGGLE_SIGN_CHARACTER = '±';
 
+    private static final int MAX_FRACTION_LENGTH = 9;
+
     private Type currentType;
     private Sign currentSign;
     private State currentState;
-    private StringBuilder wholeInput;
-    private StringBuilder fractionInput;
+    private final StringBuilder wholeInput;
+    private final StringBuilder fractionInput;
 
     public ValueFormatter()
     {
@@ -18,7 +21,7 @@ public class ValueFormatter
         clear();
     }
 
-    public void clear()
+    public final void clear()
     {
         this.currentType = Type.TIME;
         this.currentSign = Sign.POSITIVE;
@@ -70,7 +73,7 @@ public class ValueFormatter
                     if (wholeInput.length() > 0 || ch != '0') wholeInput.append(ch);
                     break;
                 case FRACTION:
-                    if (fractionInput.length() < 9) fractionInput.append(ch);
+                    if (fractionInput.length() < MAX_FRACTION_LENGTH) fractionInput.append(ch);
                     break;
             }
         }
@@ -102,10 +105,11 @@ public class ValueFormatter
 
     boolean isEmpty()
     {
-        return wholeInput.length() == 0 & fractionInput.length() == 0;
+        return wholeInput.length() == 0 && fractionInput.length() == 0;
     }
 
     @Override
+    @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
     public String toString() {
         var result = new StringBuilder();
 

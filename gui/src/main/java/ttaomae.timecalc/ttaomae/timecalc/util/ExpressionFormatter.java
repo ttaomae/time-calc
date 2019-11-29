@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class ExpressionFormatter
+public final class ExpressionFormatter
 {
     public static final char TOGGLE_TYPE_CHARACTER = ValueFormatter.TOGGLE_TYPE_CHARACTER;
     public static final char TOGGLE_SIGN_CHARACTER =  ValueFormatter.TOGGLE_SIGN_CHARACTER;
@@ -76,6 +76,8 @@ public class ExpressionFormatter
         });
     }
 
+    // char literals for '(' and ')' are fairly self explanatory and unlikely to change.
+    @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
     private void inputParenthesis(char ch)
     {
         assert charIsParenthesis(ch);
@@ -89,21 +91,20 @@ public class ExpressionFormatter
                 nUnclosedParentheses++;
             }
         }
-        else if (ch == ')') {
-            // Closing parenthesis only allowed if there are unclosed parentheses.
-            if (nUnclosedParentheses > 0) {
-                var optionalLastToken = getLastToken();
-                // If there are unclosed parentheses, then there must
-                // at least be a previous parenthesis token.
-                assert optionalLastToken.isPresent();
-                var lastToken = optionalLastToken.get();
+        // Closing parenthesis only allowed if there are unclosed parentheses.
+        else if (ch == ')' && nUnclosedParentheses > 0) {
+            var optionalLastToken = getLastToken();
+            // If there are unclosed parentheses, then there must
+            // at least be a previous parenthesis token.
+            assert optionalLastToken.isPresent();
+            var lastToken = optionalLastToken.get();
 
-                // Cannot input closing parenthesis after operator or opening parenthesis.
-                if (lastToken.type != Token.Type.OPERATOR && !lastToken.stringValue.equals("(")) {
-                    tokens.add(Token.parenthesis(ch));
-                    nUnclosedParentheses--;
-                }
+            // Cannot input closing parenthesis after operator or opening parenthesis.
+            if (lastToken.type != Token.Type.OPERATOR && !lastToken.stringValue.equals("(")) {
+                tokens.add(Token.parenthesis(ch));
+                nUnclosedParentheses--;
             }
+
         }
     }
 
@@ -125,17 +126,13 @@ public class ExpressionFormatter
 
     private Optional<Token> getLastToken()
     {
-        if (tokens.size() == 0) {
-            return Optional.empty();
-        }
-        else {
-            return Optional.of(tokens.get(tokens.size() - 1));
-        }
+        if (tokens.isEmpty()) return Optional.empty();
+        else return Optional.of(tokens.get(tokens.size() - 1));
     }
 
     private void setLastToken(Token token)
     {
-        assert tokens.size() > 0;
+        assert !tokens.isEmpty();
 
         int lastIndex = tokens.size() - 1;
         tokens.set(lastIndex, token);
@@ -143,7 +140,7 @@ public class ExpressionFormatter
 
     private void removeLastToken()
     {
-        assert tokens.size() > 0;
+        assert !tokens.isEmpty();
 
         tokens.remove(tokens.size() - 1);
     }

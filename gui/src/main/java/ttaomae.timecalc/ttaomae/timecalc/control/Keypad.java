@@ -70,9 +70,8 @@ public class Keypad extends Control
                 case ESCAPE: return Optional.of(Key.CLEAR);
                 case ENTER: return Optional.of(Key.EQUALS);
                 case BACK_SPACE: return Optional.of(Key.DELETE);
+                default: return Optional.empty();
             }
-
-            return Optional.empty();
         }
 
         /**
@@ -80,6 +79,7 @@ public class Keypad extends Control
          * javafx.scene.input.KeyEvent#getCharacter() KeyEvent#getCharacter()}), or an empty
          * optional if none exists.
          */
+        @SuppressWarnings("PMD.CyclomaticComplexity")
         public static Optional<Key> fromCharacter(String character)
         {
             switch (character) {
@@ -113,6 +113,7 @@ public class Keypad extends Control
         }
     }
 
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     public Keypad()
     {
         getStyleClass().setAll("keypad");
@@ -146,7 +147,7 @@ public class Keypad extends Control
         return new KeypadSkin(this);
     }
 
-    private class KeypadSkin extends SkinBase<Keypad>
+    private static class KeypadSkin extends SkinBase<Keypad>
     {
         private KeypadSkin(Keypad keypad)
         {

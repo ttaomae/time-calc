@@ -2,6 +2,7 @@ package ttaomae.timecalc.util;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
@@ -69,7 +70,7 @@ public class TimeCalcCoreExpressionEvaluator implements ExpressionEvalutor
             Function<Process, InputStream> inputStreamGetter)
     {
         try (var calcOutput = inputStreamGetter.apply(process)) {
-            String result = new String(calcOutput.readAllBytes());
+            String result = new String(calcOutput.readAllBytes(), StandardCharsets.UTF_8);
             return Optional.of(result);
         }
         catch (IOException e) {
