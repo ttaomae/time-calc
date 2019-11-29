@@ -79,8 +79,12 @@ impl ExprVisitor for ExprEvaluator {
                 match (r1, r2) {
                     (EvalResult::Number(n1), EvalResult::Number(n2)) => match op {
                         BinaryOp::Add => Result::Ok(EvalResult::Number(round_decimal(n1 + n2))),
-                        BinaryOp::Subtract => Result::Ok(EvalResult::Number(round_decimal(n1 - n2))),
-                        BinaryOp::Multiply => Result::Ok(EvalResult::Number(round_decimal(n1 * n2))),
+                        BinaryOp::Subtract => {
+                            Result::Ok(EvalResult::Number(round_decimal(n1 - n2)))
+                        }
+                        BinaryOp::Multiply => {
+                            Result::Ok(EvalResult::Number(round_decimal(n1 * n2)))
+                        }
                         BinaryOp::Divide => Result::Ok(EvalResult::Number(round_decimal(n1 / n2))),
                     },
                     (EvalResult::Time(t1), EvalResult::Time(t2)) => match op {

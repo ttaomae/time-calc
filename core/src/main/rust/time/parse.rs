@@ -150,8 +150,7 @@ impl Parser {
         let is_negative = if token_iter.peek() == Option::Some(&Token::Hyphen) {
             token_iter.next();
             true
-        }
-        else {
+        } else {
             false
         };
 
@@ -163,14 +162,16 @@ impl Parser {
                 t => return Result::Err(ParseError::ExpectedNumber(t)),
             }
             match token_iter.peek() {
-                Option::Some(Token::Colon) => {token_iter.next();},
+                Option::Some(Token::Colon) => {
+                    token_iter.next();
+                }
                 _ => break,
             }
         }
         // If we reach this point, we must have consumed at least one number from tokens so we don't
         // need to check for `components.len() == 0`.
         if components.len() > 3 {
-            return Result::Err(ParseError::ExceededMaxComponents)
+            return Result::Err(ParseError::ExceededMaxComponents);
         }
 
         // Consume fractional seconds.
@@ -183,8 +184,7 @@ impl Parser {
                 Option::Some(Token::Number(n)) => Option::Some(n.to_string()),
                 t => return Result::Err(ParseError::ExpectedNumberAfterDecimal(t)),
             }
-        }
-        else {
+        } else {
             Option::None
         };
 
@@ -192,14 +192,13 @@ impl Parser {
         let is_seconds = if token_iter.peek() == Option::Some(&Token::S) {
             token_iter.next();
             true
-        }
-        else {
+        } else {
             false
         };
 
         // We've consumed everything we understand.
         if let Option::Some(t) = token_iter.peek() {
-            return Result::Err(ParseError::ExpectedEndOfInput(t.clone()))
+            return Result::Err(ParseError::ExpectedEndOfInput(t.clone()));
         }
 
         if is_seconds && components.len() != 1 {
@@ -223,10 +222,7 @@ impl Parser {
         }
         // Minutes
         if components.len() >= 2 {
-            let m = components[
-                if components.len() == 2 { 0 }
-                else { 1 }
-            ].to_string();
+            let m = components[if components.len() == 2 { 0 } else { 1 }].to_string();
 
             if m.len() != 2 {
                 return Result::Err(ParseError::ExpectedTwoDigitMinutes(m));
@@ -238,12 +234,15 @@ impl Parser {
             time_builder.minutes(minutes);
         }
         // Seconds
-        if components.len() >= 1 {
-            let s = components[
-                if components.len() == 1 { 0 }
-                else if components.len() == 2 { 1 }
-                else { 2 }
-            ].to_string();
+        if !components.is_empty() {
+            let s = components[if components.len() == 1 {
+                0
+            } else if components.len() == 2 {
+                1
+            } else {
+                2
+            }]
+            .to_string();
 
             if s.len() != 2 && !is_seconds {
                 return Result::Err(ParseError::ExpectedTwoDigitSeconds(s));

@@ -256,18 +256,14 @@ impl<'a> Parser<'a> {
 
     fn value(&mut self) -> Result<Expr, ParseError> {
         match self.next() {
-            Option::Some(Token::Number(n)) => {
-                match Decimal::from_str(n) {
-                    Result::Ok(number) => Result::Ok(Expr::Literal(Literal::Number(number))),
-                    Result::Err(_) => Result::Err(ParseError::InvalidNumber(n.to_string())),
-                }
-            }
-            Option::Some(Token::Time(t)) => {
-                match Time::from_str(t) {
-                    Result::Ok(time) => Result::Ok(Expr::Literal(Literal::Time(time))),
-                    Result::Err(_) => Result::Err(ParseError::InvalidTime(t.to_string())),
-                }
-            }
+            Option::Some(Token::Number(n)) => match Decimal::from_str(n) {
+                Result::Ok(number) => Result::Ok(Expr::Literal(Literal::Number(number))),
+                Result::Err(_) => Result::Err(ParseError::InvalidNumber(n.to_string())),
+            },
+            Option::Some(Token::Time(t)) => match Time::from_str(t) {
+                Result::Ok(time) => Result::Ok(Expr::Literal(Literal::Time(time))),
+                Result::Err(_) => Result::Err(ParseError::InvalidTime(t.to_string())),
+            },
             Option::Some(Token::LeftParen) => {
                 let expr = self.expression();
                 match self.next() {
