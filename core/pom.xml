@@ -29,10 +29,11 @@
         <configuration>
           <executable>cargo</executable>
         </configuration>
+        <!-- `cargo build` during compile phase. -->
         <executions>
           <execution>
             <id>cargo-build</id>
-            <phase>test</phase>
+            <phase>compile</phase>
             <goals>
               <goal>exec</goal>
             </goals>
@@ -42,6 +43,7 @@
               </arguments>
             </configuration>
           </execution>
+          <!-- `cargo test` during test phase. -->
           <execution>
             <id>cargo-test</id>
             <phase>test</phase>
@@ -54,19 +56,7 @@
               </arguments>
             </configuration>
           </execution>
-          <execution>
-            <id>cargo-build-release</id>
-            <phase>prepare-package</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <arguments>
-                <argument>build</argument>
-                <argument>--release</argument>
-              </arguments>
-            </configuration>
-          </execution>
+          <!-- `cargo clippy` during verify phase. -->
           <execution>
             <id>cargo-clippy</id>
             <phase>verify</phase>
@@ -83,28 +73,91 @@
           </execution>
         </executions>
       </plugin>
-      <plugin>
-        <artifactId>maven-resources-plugin</artifactId>
-        <version>3.1.0</version>
-        <executions>
-          <execution>
-            <id>copy-resources</id>
-            <phase>prepare-package</phase>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${basedir}/target/classes</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${basedir}/target/release</directory>
-                  <includes>time-calc.exe</includes>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
     </plugins>
   </build>
+  <profiles>
+    <!-- Default `debug` profile. Copies executable from /debug directory. -->
+    <profile>
+      <id>debug</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-resources-plugin</artifactId>
+            <version>3.1.0</version>
+            <executions>
+              <execution>
+                <id>copy-resources-debug</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <configuration>
+                  <outputDirectory>${basedir}/target/classes</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>${basedir}/target/debug</directory>
+                      <includes>time-calc.exe</includes>
+                    </resource>
+                  </resources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- `release` profile. Builds release mode executable and copies from /release directory. -->
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>1.6.0</version>
+            <executions>
+              <execution>
+                <id>cargo-build-release</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <arguments>
+                    <argument>build</argument>
+                    <argument>--release</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>maven-resources-plugin</artifactId>
+            <version>3.1.0</version>
+            <executions>
+              <execution>
+                <id>copy-resources-release</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <configuration>
+                  <outputDirectory>${basedir}/target/classes</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>${basedir}/target/release</directory>
+                      <includes>time-calc.exe</includes>
+                    </resource>
+                  </resources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

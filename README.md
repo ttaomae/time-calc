@@ -40,7 +40,7 @@ where
 
 ### Command Line
 To use the command line tool, simply provide a valid expression.
-```
+```bash
 $ time-calc 9.8 + 7.6 - 5.4 * 3.2 / 1.1
 1.690909091
 $ time-calc 24:36 + 48s
@@ -62,30 +62,38 @@ clicking on the `#` key or typing `#` or `n`.
 
 ### Command Line Tool
 The `core` module is written in [Rust](https://www.rust-lang.org/) and can be built using Cargo.
-
-```
-$ cd core
+First navigate to the `core` directory then run one of the following commands.
+```bash
+# Faster compile time; slower, larger binary.
+$ cargo build
+# Slower compile time; faster, smaller binary.
 $ cargo build --release
 ```
-It will produce the command line execuatable at `core/target/release/time-calc`.
+It will produce the command line executable at `core/target/{release,debug}/time-calc`, depending
+on which build you performed.
 
 The `core` module is also a [Java](https://jdk.java.net/) project which can be built using
 [Maven](https://maven.apache.org/). It simply bundles the executable in a JAR so that it can be used
-by the GUI. Currently, this method is only supported on Windows.
-```
-$ cd core
+by the GUI. Currently, this method is only supported on Windows. Use one of the following commands
+to build the executable in the same location, plus a JAR file in the `core/target` directory.
+```bash
+# Debug build.
 $ mvn package
+# Release build.
+$ mvn -P release package
 ```
-The executable will be available at the same location, but a JAR file will also be built in the
-`core/target/` directory.
 
 ### Desktop Application
 The `gui` module is a [JavaFX](https://openjfx.io/) project which can be build using Maven.
 Currently, only Windows builds are supported.
 
-The simplest way to build it is to build the entire project.
-```
-$ mvn package
+The simplest way to build it is to build the entire project with the `bundle` profile. From the root
+of the project, run one of the following commands.
+```bash
+# Use debug build of `core` executable in bundled application.
+$ mvn -P bundle package
+# Use release build in bundled application.
+$ mvn -P release -P bundle package
 ```
 
 This will automatically build both the `core` and `gui` modules. The application will be built in
@@ -93,10 +101,15 @@ the `gui/target/time-calc/` directory. It can be launched by running the
 `gui/target/time-calc/bin/time-calc.bat` script.
 
 Alternatively, you can install the `core` module to your local Maven repository. Then as long as you
-don't make any changes to the `core` module, you only need to re-build the `gui` module.
-```
+don't make any changes to the `core` module, you only need to re-build the `gui` module. From the
+root of the project, run the following commands.
+```bash
 $ cd core
+# NOTE: Run only one of the following, depending on whether
+# you want debug or release builds of the `core` executable.
 $ mvn install
+$ mvn -P release install
 $ cd ../gui
-$ mvn package
+$ mvn -P bundle package
 ```
+Subsequent builds will only require you to run the last command.

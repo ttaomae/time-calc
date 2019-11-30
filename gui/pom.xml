@@ -80,29 +80,38 @@
           <excludeFilterFile>../spotbugs-exclude.xml</excludeFilterFile>
         </configuration>
       </plugin>
-      <plugin>
-        <groupId>org.openjfx</groupId>
-        <artifactId>javafx-maven-plugin</artifactId>
-        <version>0.0.2</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>jlink</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <mainClass>ttaomae.timecalc/ttaomae.timecalc.TimeCalculator</mainClass>
-          <stripDebug>true</stripDebug>
-          <compress>2</compress>
-          <noHeaderFiles>true</noHeaderFiles>
-          <noManPages>true</noManPages>
-          <launcher>time-calc</launcher>
-          <jlinkImageName>time-calc</jlinkImageName>
-          <jlinkZipName>time-calc</jlinkZipName>
-        </configuration>
-      </plugin>
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>bundle</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-maven-plugin</artifactId>
+            <version>0.0.2</version>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>jlink</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <mainClass>ttaomae.timecalc/ttaomae.timecalc.TimeCalculator</mainClass>
+              <stripDebug>true</stripDebug>
+              <compress>2</compress>
+              <noHeaderFiles>true</noHeaderFiles>
+              <noManPages>true</noManPages>
+              <launcher>time-calc</launcher>
+              <jlinkImageName>time-calc</jlinkImageName>
+              <jlinkZipName>time-calc</jlinkZipName>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
