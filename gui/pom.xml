@@ -13,45 +13,43 @@
   <packaging>jar</packaging>
 
   <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>12</maven.compiler.source>
-    <maven.compiler.target>12</maven.compiler.target>
-
-    <org.openjfx.version>12.0.1</org.openjfx.version>
-    <org.junit.jupiter.version>5.5.1</org.junit.jupiter.version>
+    <time-calc-core.version>0.1.0-SNAPSHOT</time-calc-core.version>
+    <javafx.version>13.0.1</javafx.version>
+    <javafx-maven-plugin.version>0.0.3</javafx-maven-plugin.version>
+    <junit.version>5.5.2</junit.version>
   </properties>
 
   <dependencies>
     <dependency>
       <groupId>ttaomae</groupId>
       <artifactId>time-calc-core</artifactId>
-      <version>0.1.0-SNAPSHOT</version>
+      <version>${time-calc-core.version}</version>
     </dependency>
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-controls</artifactId>
-      <version>${org.openjfx.version}</version>
+      <version>${javafx.version}</version>
     </dependency>
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-fxml</artifactId>
-      <version>${org.openjfx.version}</version>
+      <version>${javafx.version}</version>
     </dependency>
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-base</artifactId>
-      <version>${org.openjfx.version}</version>
+      <version>${javafx.version}</version>
     </dependency>
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-graphics</artifactId>
-      <version>${org.openjfx.version}</version>
+      <version>${javafx.version}</version>
     </dependency>
 
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
-      <version>${org.junit.jupiter.version}</version>
+      <version>${junit.version}</version>
     </dependency>
   </dependencies>
 
@@ -90,7 +88,7 @@
           <plugin>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-maven-plugin</artifactId>
-            <version>0.0.2</version>
+            <version>${javafx-maven-plugin.version}</version>
             <executions>
               <execution>
                 <phase>package</phase>

@@ -13,10 +13,10 @@
   <packaging>jar</packaging>
 
   <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>12</maven.compiler.source>
-    <maven.compiler.target>12</maven.compiler.target>
+    <exec-maven-plugin.version>1.6.0</exec-maven-plugin.version>
+    <maven-resources-plugin.version>3.1.0</maven-resources-plugin.version>
   </properties>
+
 
   <build>
     <sourceDirectory>src/main/java/ttaomae.timecalc.core</sourceDirectory>
@@ -25,7 +25,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
-        <version>1.6.0</version>
+        <version>${exec-maven-plugin.version}</version>
         <configuration>
           <executable>cargo</executable>
         </configuration>
@@ -86,7 +86,7 @@
         <plugins>
           <plugin>
             <artifactId>maven-resources-plugin</artifactId>
-            <version>3.1.0</version>
+            <version>${maven-resources-plugin.version}</version>
             <executions>
               <execution>
                 <id>copy-resources-debug</id>
@@ -117,7 +117,7 @@
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
-            <version>1.6.0</version>
+            <version>${exec-maven-plugin.version}</version>
             <executions>
               <execution>
                 <id>cargo-build-release</id>
@@ -136,7 +136,7 @@
           </plugin>
           <plugin>
             <artifactId>maven-resources-plugin</artifactId>
-            <version>3.1.0</version>
+            <version>${maven-resources-plugin.version}</version>
             <executions>
               <execution>
                 <id>copy-resources-release</id>
