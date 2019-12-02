@@ -15,8 +15,11 @@
   <properties>
     <exec-maven-plugin.version>1.6.0</exec-maven-plugin.version>
     <maven-resources-plugin.version>3.1.0</maven-resources-plugin.version>
-  </properties>
 
+    <!-- Default build mode. May be overridden by `release` profile. -->
+    <time-calc.build-mode>debug</time-calc.build-mode>
+    <time-calc.build-mode-flag></time-calc.build-mode-flag>
+  </properties>
 
   <build>
     <sourceDirectory>src/main/java/ttaomae.timecalc.core</sourceDirectory>
@@ -40,6 +43,7 @@
             <configuration>
               <arguments>
                 <argument>build</argument>
+                <argument>${time-calc.build-mode-flag}</argument>
               </arguments>
             </configuration>
           </execution>
@@ -53,6 +57,7 @@
             <configuration>
               <arguments>
                 <argument>test</argument>
+                <argument>${time-calc.build-mode-flag}</argument>
               </arguments>
             </configuration>
           </execution>
@@ -73,91 +78,74 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>${maven-resources-plugin.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>resources</goal>
+            </goals>
+            <configuration>
+              <resources>
+                <resource>
+                  <directory>src/main/resources</directory>
+                  <!-- Replace ${placeholder} values in resources with properties. -->
+                  <filtering>true</filtering>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>copy-time-calc-executable</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${basedir}/target/classes</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${basedir}/target/${time-calc.build-mode}</directory>
+                  <includes>${time-calc.executable-name}</includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
   <profiles>
-    <!-- Default `debug` profile. Copies executable from /debug directory. -->
-    <profile>
-      <id>debug</id>
-      <activation>
-        <activeByDefault>true</activeByDefault>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-resources-plugin</artifactId>
-            <version>${maven-resources-plugin.version}</version>
-            <executions>
-              <execution>
-                <id>copy-resources-debug</id>
-                <phase>prepare-package</phase>
-                <goals>
-                  <goal>copy-resources</goal>
-                </goals>
-                <configuration>
-                  <outputDirectory>${basedir}/target/classes</outputDirectory>
-                  <resources>
-                    <resource>
-                      <directory>${basedir}/target/debug</directory>
-                      <includes>time-calc.exe</includes>
-                    </resource>
-                  </resources>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <!-- `release` profile. Builds release mode executable and copies from /release directory. -->
+    <!-- `release` profile. Builds release mode executable. -->
     <profile>
       <id>release</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>exec-maven-plugin</artifactId>
-            <version>${exec-maven-plugin.version}</version>
-            <executions>
-              <execution>
-                <id>cargo-build-release</id>
-                <phase>prepare-package</phase>
-                <goals>
-                  <goal>exec</goal>
-                </goals>
-                <configuration>
-                  <arguments>
-                    <argument>build</argument>
-                    <argument>--release</argument>
-                  </arguments>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <artifactId>maven-resources-plugin</artifactId>
-            <version>${maven-resources-plugin.version}</version>
-            <executions>
-              <execution>
-                <id>copy-resources-release</id>
-                <phase>prepare-package</phase>
-                <goals>
-                  <goal>copy-resources</goal>
-                </goals>
-                <configuration>
-                  <outputDirectory>${basedir}/target/classes</outputDirectory>
-                  <resources>
-                    <resource>
-                      <directory>${basedir}/target/release</directory>
-                      <includes>time-calc.exe</includes>
-                    </resource>
-                  </resources>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
+      <properties>
+        <time-calc.build-mode>release</time-calc.build-mode>
+        <time-calc.build-mode-flag>--release</time-calc.build-mode-flag>
+      </properties>
+    </profile>
+    <profile>
+      <id>windows</id>
+      <activation>
+        <os>
+          <family>windows</family>
+        </os>
+      </activation>
+      <properties>
+        <time-calc.executable-name>time-calc.exe</time-calc.executable-name>
+      </properties>
+    </profile>
+    <profile>
+      <id>unix</id>
+      <activation>
+        <os>
+          <family>unix</family>
+        </os>
+      </activation>
+      <properties>
+        <time-calc.executable-name>time-calc</time-calc.executable-name>
+      </properties>
     </profile>
   </profiles>
 </project>

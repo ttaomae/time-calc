@@ -13,6 +13,8 @@ import ttaomae.timecalc.core.TimeCalcLoader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.attribute.PosixFilePermissions;
 
 public class TimeCalculatorController
 {
@@ -31,12 +33,24 @@ public class TimeCalculatorController
 
     private static Path loadTimeCalcCore()
     {
-        try (var exe = TimeCalcLoader.class.getResourceAsStream("/time-calc.exe")) {
+        try (var executableStream = TimeCalcLoader.getExecutableAsStream()) {
             var tempDir = Files.createTempDirectory("time-calc-");
             tempDir.toFile().deleteOnExit();
 
-            var timeCalcPath = tempDir.resolve("tc.exe");
-            Files.copy(exe, timeCalcPath);
+            var timeCalcPath = tempDir.resolve(TimeCalcLoader.getExecutableName());
+            Files.copy(executableStream, timeCalcPath);
+
+            try {
+                // JAR files do not preserve permissions of the files they contain, so we need to
+                // ensure that the copied file is executable
+                Files.setPosixFilePermissions(timeCalcPath,
+                        PosixFilePermissions.fromString("rwxr-xr-x"));
+            }
+            catch (UnsupportedOperationException ignored) {
+                // If this is a non-POSIX file system, assume that the file is already executable
+                // and ignore the exception.
+            }
+
             return timeCalcPath;
         }
         catch (IOException e) {

@@ -1,5 +1,4 @@
 # Time Calculator
-
 This is a simple command line tool and desktop application which performs calculations on times.
 In English, the word "time" can refer to two distinct concepts. It can refer to a specific point in
 time (e.g. "what time is it?") or it can refer to a duration between two points in time (e.g. "how
@@ -7,7 +6,6 @@ much time will it take?"). This calculator is for the second type.
 
 
 ## Use
-
 ### Operations and Syntax
 The following table describes the supported operations.
 
@@ -51,7 +49,6 @@ $ time-calc (55:55 / 2.5)
 ```
 
 ### Desktop Application
-
 Values are automatically formatted as you type, so formatting characters such as `s` and `:` are not
 necessary. By default, values are formatted as times, but you can toggle between times and numbers
 clicking on the `#` key or typing `#` or `n`.
@@ -59,6 +56,8 @@ clicking on the `#` key or typing `#` or `n`.
 ![Example desktop application usage](screenshots/demo.gif)
 
 ## Build
+This project can be built on Windows or Linux. Builds may work out-of-the-box or with minor
+modification on macOS, however this has not been tested.
 
 ### Command Line Tool
 The `core` module is written in [Rust](https://www.rust-lang.org/) and can be built using Cargo.
@@ -74,8 +73,8 @@ on which build you performed.
 
 The `core` module is also a [Java](https://jdk.java.net/) project which can be built using
 [Maven](https://maven.apache.org/). It simply bundles the executable in a JAR so that it can be used
-by the GUI. Currently, this method is only supported on Windows. Use one of the following commands
-to build the executable in the same location, plus a JAR file in the `core/target` directory.
+by the GUI. Use one of the following commands to build the executable in the same location, plus a
+JAR file in the `core/target` directory.
 ```bash
 # Debug build.
 $ mvn package
@@ -85,7 +84,6 @@ $ mvn -P release package
 
 ### Desktop Application
 The `gui` module is a [JavaFX](https://openjfx.io/) project which can be build using Maven.
-Currently, only Windows builds are supported.
 
 The simplest way to build it is to build the entire project with the `bundle` profile. From the root
 of the project, run one of the following commands.
