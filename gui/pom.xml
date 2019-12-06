@@ -78,6 +78,14 @@
           <excludeFilterFile>../spotbugs-exclude.xml</excludeFilterFile>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.openjfx</groupId>
+        <artifactId>javafx-maven-plugin</artifactId>
+        <version>${javafx-maven-plugin.version}</version>
+        <configuration>
+          <mainClass>ttaomae.timecalc/ttaomae.timecalc.TimeCalculator</mainClass>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
   <profiles>
@@ -88,7 +96,6 @@
           <plugin>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-maven-plugin</artifactId>
-            <version>${javafx-maven-plugin.version}</version>
             <executions>
               <execution>
                 <phase>package</phase>
@@ -98,7 +105,6 @@
               </execution>
             </executions>
             <configuration>
-              <mainClass>ttaomae.timecalc/ttaomae.timecalc.TimeCalculator</mainClass>
               <stripDebug>true</stripDebug>
               <compress>2</compress>
               <noHeaderFiles>true</noHeaderFiles>

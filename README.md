@@ -91,7 +91,7 @@ $ mvn -P release package
 ```
 
 ### Desktop Application
-The `gui` module is a [JavaFX](https://openjfx.io/) project which can be build using Maven.
+The `gui` module is a [JavaFX](https://openjfx.io/) project which can be built using Maven.
 
 The simplest way to build it is to build the entire project with the `bundle` profile. From the root
 of the project, run one of the following commands.
@@ -118,3 +118,9 @@ $ cd gui
 $ mvn -P bundle package
 ```
 Subsequent builds will only require you to run the last command.
+
+If you have installed the `core` module, you can also run the application directly by navigating to
+the `gui` directory and running the following command.
+```bash
+$ mvn javafx:run
+```
