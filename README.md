@@ -20,7 +20,7 @@ The following table describes the supported operations.
 Operations are evaluated in standard order. That is, multiplication and division, followed by
 addition and subtraction, with operators of the same precedence evaluated left to right.
 Additionally, parentheses can be used to group sub-expressions to override the normal order or
-operations. No precendence is given to operations involving times versus numbers.
+operations. No precedence is given to operations involving times versus numbers.
 
 A time can be expressed in one of the following formats:
 * *h*:*mm*:*ss*[.*sss*]
@@ -37,7 +37,9 @@ where
 
 
 ### Command Line
-To use the command line tool, simply provide a valid expression.
+To use the command line tool, simply provide a valid expression. Depending on your shell, you may
+need to escape or quote certain characters, or you can just quote the entire expression. However,
+for simplicity, the following examples will not do this.
 ```bash
 $ time-calc 9.8 + 7.6 - 5.4 * 3.2 / 1.1
 1.690909091
@@ -46,6 +48,7 @@ $ time-calc 24:36 + 48s
 $ time-calc 12:34:56 / 3
 2:05:49.333333333
 $ time-calc (55:55 / 2.5)
+22:22
 ```
 
 ### Desktop Application
@@ -56,11 +59,17 @@ clicking on the `#` key or typing `#` or `n`.
 ![Example desktop application usage](screenshots/demo.gif)
 
 ## Build
-This project can be built on Windows or Linux. Builds may work out-of-the-box or with minor
-modification on macOS, however this has not been tested.
+### Requirements
+Builds should work on Windows and Linux with the following minimum requirements:
+* [Java](https://jdk.java.net/) 11
+* [Rust](https://www.rust-lang.org/) 1.39.0
+* [Maven](https://maven.apache.org/) 3.6.3
+
+Older or newer versions may work, but they have not been tested. Similarly, builds may work on macOS
+since both Java and Rust have good cross-platform support, but this has not been tested.
 
 ### Command Line Tool
-The `core` module is written in [Rust](https://www.rust-lang.org/) and can be built using Cargo.
+The `core` module is written in Rust and can be built using Cargo.
 First navigate to the `core` directory then run one of the following commands.
 ```bash
 # Faster compile time; slower, larger binary.
@@ -71,10 +80,9 @@ $ cargo build --release
 It will produce the command line executable at `core/target/{release,debug}/time-calc`, depending
 on which build you performed.
 
-The `core` module is also a [Java](https://jdk.java.net/) project which can be built using
-[Maven](https://maven.apache.org/). It simply bundles the executable in a JAR so that it can be used
-by the GUI. Use one of the following commands to build the executable in the same location, plus a
-JAR file in the `core/target` directory.
+The `core` module is also a Java project which can be built using Maven. It essentially just bundles
+the executable in a JAR so that it can be used by the GUI. Use one of the following commands to
+build the executable in the same location, plus a JAR file in the `core/target` directory.
 ```bash
 # Debug build.
 $ mvn package
@@ -102,12 +110,11 @@ Alternatively, you can install the `core` module to your local Maven repository.
 don't make any changes to the `core` module, you only need to re-build the `gui` module. From the
 root of the project, run the following commands.
 ```bash
-$ cd core
 # NOTE: Run only one of the following, depending on whether
 # you want debug or release builds of the `core` executable.
-$ mvn install
-$ mvn -P release install
-$ cd ../gui
+$ mvn -pl core -am install
+$ mvn -pl core -am -P release install
+$ cd gui
 $ mvn -P bundle package
 ```
 Subsequent builds will only require you to run the last command.
