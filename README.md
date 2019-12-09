@@ -37,9 +37,10 @@ where
 
 
 ### Command Line
-To use the command line tool, simply provide a valid expression. Depending on your shell, you may
-need to escape or quote certain characters, or you can just quote the entire expression. However,
-for simplicity, the following examples will not do this.
+The command line tool has three modes of operation. First, there is single expression mode where you
+provide an expression as command line arguments. Depending on your shell, you may need to escape or
+quote certain characters, or you can just quote the entire expression. However, for simplicity, the
+following examples will not do this.
 ```bash
 $ time-calc 9.8 + 7.6 - 5.4 * 3.2 / 1.1
 1.690909091
@@ -48,6 +49,39 @@ $ time-calc 24:36 + 48s
 $ time-calc 12:34:56 / 3
 2:05:49.333333333
 $ time-calc (55:55 / 2.5)
+22:22
+```
+
+If you do not provide any arguments, you will enter into interactive mode. In this mode you can
+enter multiple expressions and they will each be evaluted. To exit interactive mode, send an EOF
+character (usually `Ctrl-D`). For clarity, in the example below, lines entered by the user are
+prefixed with `> `. Howver, this will not actually be output and you should not type this.
+```bash
+$ time-calc
+> 9.8 + 7.6 - 5.4 * 3.2 / 1.1
+1.690909091
+> 24:36 + 48s
+25:24
+> 12:34:56 / 3
+2:05:49.333333333
+> (55:55 / 2.5)
+22:22
+^D
+```
+
+The third mode is batch mode. In this mode, you can provide a list of expressions, delimited by line
+breaks, to the stdin of the process. Each expression will be evaluated in order and the results will
+be written to stdout. (This is technically the same as interactive mode, except rather than typing
+in expressions directly, they are provided all at once.)
+```bash
+$ echo "9.8 + 7.6 - 5.4 * 3.2 / 1.1" > expressions
+$ echo "24:36 + 48s"                >> expressions
+$ echo "12:34:56 / 3"               >> expressions
+$ echo "(55:55 / 2.5)"              >> expressions
+$ cat expressions | time-calc
+1.690909091
+25:24
+2:05:49.333333333
 22:22
 ```
 
