@@ -51,6 +51,7 @@ pub(crate) enum EvalError {
     AddTimeAndNumber,
     SubtractTimeAndNumber,
     DivideNumberByTime,
+    DivideByZero,
 }
 
 impl std::convert::From<ParseError> for EvalError {
@@ -85,17 +86,35 @@ impl ExprVisitor for ExprEvaluator {
                         BinaryOp::Multiply => {
                             Result::Ok(EvalResult::Number(round_decimal(n1 * n2)))
                         }
-                        BinaryOp::Divide => Result::Ok(EvalResult::Number(round_decimal(n1 / n2))),
+                        BinaryOp::Divide => {
+                            if n2 == dec!(0) {
+                                Result::Err(EvalError::DivideByZero)
+                            } else {
+                                Result::Ok(EvalResult::Number(round_decimal(n1 / n2)))
+                            }
+                        }
                     },
                     (EvalResult::Time(t1), EvalResult::Time(t2)) => match op {
                         BinaryOp::Add => Result::Ok(EvalResult::Time(t1 + t2)),
                         BinaryOp::Subtract => Result::Ok(EvalResult::Time(t1 - t2)),
-                        BinaryOp::Divide => Result::Ok(EvalResult::Number(round_decimal(t1 / t2))),
+                        BinaryOp::Divide => {
+                            if t2 == Time::builder().build() {
+                                Result::Err(EvalError::DivideByZero)
+                            } else {
+                                Result::Ok(EvalResult::Number(round_decimal(t1 / t2)))
+                            }
+                        }
                         BinaryOp::Multiply => Result::Err(EvalError::MultiplyTimes),
                     },
                     (EvalResult::Time(t), EvalResult::Number(n)) => match op {
                         BinaryOp::Multiply => Result::Ok(EvalResult::Time(t * n)),
-                        BinaryOp::Divide => Result::Ok(EvalResult::Time(t / n)),
+                        BinaryOp::Divide => {
+                            if n == dec!(0) {
+                                Result::Err(EvalError::DivideByZero)
+                            } else {
+                                Result::Ok(EvalResult::Time(t / n))
+                            }
+                        }
                         BinaryOp::Add => Result::Err(EvalError::AddTimeAndNumber),
                         BinaryOp::Subtract => Result::Err(EvalError::SubtractTimeAndNumber),
                     },
@@ -214,12 +233,18 @@ mod tests {
 
     #[test]
     fn eval_invalid() {
+        // Incompatible types and operations.
         assert!(eval("1 + 0:00:02").is_err());
         assert!(eval("0:00:30 + 4").is_err());
         assert!(eval("5 - 0:06:00").is_err());
         assert!(eval("7:00:00 - 8").is_err());
         assert!(eval("9:09:09 * 10:10:10").is_err());
         assert!(eval("11 / 12:12:12").is_err());
+
+        // Divide by Zero.
+        assert!(eval("22s / 0s").is_err());
+        assert!(eval("33s / 0").is_err());
+        assert!(eval("44 / 0").is_err());
     }
 
     fn assert_eval(expr: &str, result: EvalResult) {

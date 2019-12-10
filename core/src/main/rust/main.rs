@@ -2,8 +2,8 @@ mod calc;
 mod time;
 
 use std::env;
-use std::process;
 use std::io;
+use std::process;
 
 use crate::calc::eval::eval;
 
@@ -37,7 +37,7 @@ fn interactive_mode() -> Result<(), io::Error> {
             Ok(_) => match eval(expression.as_str()) {
                 Ok(result) => println!("{}", result),
                 Err(error) => eprintln!("{:?}", error),
-            }
+            },
             Err(e) => return Result::Err(e),
         }
     }
