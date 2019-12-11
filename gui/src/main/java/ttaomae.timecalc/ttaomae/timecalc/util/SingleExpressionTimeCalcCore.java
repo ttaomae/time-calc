@@ -11,13 +11,14 @@ import java.util.OptionalInt;
 import java.util.function.Function;
 
 /**
- * An expression evaluator which calls the {@code time-calc/core} executable.
+ * An expression evaluator which calls the {@code time-calc/core} executable in single expression
+ * mode.
  */
-public class TimeCalcCoreExpressionEvaluator implements ExpressionEvalutor
+public class SingleExpressionTimeCalcCore implements ExpressionEvalutor
 {
     private final String calcCommand;
 
-    public TimeCalcCoreExpressionEvaluator(Path commandPath)
+    public SingleExpressionTimeCalcCore(Path commandPath)
     {
         Objects.requireNonNull(commandPath, "commandPath must not be null.");
         if (!Files.isRegularFile(commandPath)) {
@@ -27,7 +28,10 @@ public class TimeCalcCoreExpressionEvaluator implements ExpressionEvalutor
     }
 
     @Override
-    public Result<String, String> evaluate(String expression) {
+    public Result<String, String> evaluate(String expression)
+    {
+        if (expression == null || expression.isBlank()) return Result.success("");
+
         Process process = startProcess(expression)
                 .orElseThrow(() -> new IllegalStateException("Could not start process."));
 

@@ -7,13 +7,12 @@ import ttaomae.timecalc.control.Display;
 import ttaomae.timecalc.control.Keypad;
 import ttaomae.timecalc.util.ExpressionEvalutor;
 import ttaomae.timecalc.util.ExpressionFormatter;
-import ttaomae.timecalc.util.TimeCalcCoreExpressionEvaluator;
 import ttaomae.timecalc.core.TimeCalcLoader;
+import ttaomae.timecalc.util.InteractiveModeTimeCalcCore;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermissions;
 
 public class TimeCalculatorController
@@ -28,7 +27,7 @@ public class TimeCalculatorController
     public TimeCalculatorController()
     {
         formatter = new ExpressionFormatter();
-        evaluator = new TimeCalcCoreExpressionEvaluator(loadTimeCalcCore());
+        evaluator = new InteractiveModeTimeCalcCore(loadTimeCalcCore());
     }
 
     private static Path loadTimeCalcCore()

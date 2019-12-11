@@ -5,7 +5,9 @@ module ttaomae.timecalc {
     opens ttaomae.timecalc.control to javafx.fxml;
 
     requires ttaomae.timecalc.core;
+    requires java.logging;
     requires javafx.base;
     requires javafx.controls;
     requires javafx.fxml;
+    requires com.github.spotbugs.annotations;
 }

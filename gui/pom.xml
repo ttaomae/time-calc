@@ -17,6 +17,7 @@
     <javafx.version>13.0.1</javafx.version>
     <javafx-maven-plugin.version>0.0.3</javafx-maven-plugin.version>
     <junit.version>5.5.2</junit.version>
+    <spotbugs-annotations.version>3.1.12</spotbugs-annotations.version>
   </properties>
 
   <dependencies>
@@ -44,6 +45,11 @@
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-graphics</artifactId>
       <version>${javafx.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.spotbugs</groupId>
+      <artifactId>spotbugs-annotations</artifactId>
+      <version>${spotbugs-annotations.version}</version>
     </dependency>
 
     <dependency>

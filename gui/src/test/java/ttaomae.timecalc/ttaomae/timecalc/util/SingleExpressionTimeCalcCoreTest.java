@@ -5,18 +5,18 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.file.Paths;
 
-public class TimeCalcCoreExpressionEvaluatorTest
+public class SingleExpressionTimeCalcCoreTest
 {
     @Test
     public void testConstructorIllegalArguments()
     {
         try {
-            new TimeCalcCoreExpressionEvaluator(null);
+            new SingleExpressionTimeCalcCore(null);
             Assertions.fail();
         } catch (NullPointerException expected) {}
 
         try {
-            new TimeCalcCoreExpressionEvaluator(Paths.get("."));
+            new SingleExpressionTimeCalcCore(Paths.get("."));
             Assertions.fail();
         } catch (IllegalArgumentException expected) {}
     }

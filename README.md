@@ -156,5 +156,5 @@ Subsequent builds will only require you to run the last command.
 If you have installed the `core` module, you can also run the application directly by navigating to
 the `gui` directory and running the following command.
 ```bash
-$ mvn javafx:run
+$ mvn compile javafx:run
 ```
