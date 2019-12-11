@@ -62,8 +62,8 @@ public class TimeCalculatorController
         for (Keypad.Key key : Keypad.Key.values()) {
             keypad.setOnAction(key, event -> updateDisplay(key));
         }
-        root.setOnKeyTyped(keyEvent -> updateDisplay(keyEvent.getCharacter()));
-        root.setOnKeyPressed(keyEvent -> updateDisplay(keyEvent.getCode()));
+        root.setOnKeyTyped(keyEvent -> onKeyTyped(keyEvent.getCharacter()));
+        root.setOnKeyPressed(keyEvent -> onKeyPressed(keyEvent.getCode()));
     }
 
     private void clear()
@@ -76,6 +76,9 @@ public class TimeCalculatorController
     private void evaluate()
     {
         formatter.clear();
+
+        if (display.getResultText().isEmpty()) return;
+
         var isNumber = true;
         char[] chars = display.getResultText().toCharArray();
         var isNegative = chars[0] == '-';
@@ -97,21 +100,21 @@ public class TimeCalculatorController
     private void delete()
     {
         var expression = formatter.deleteCharacter();
-        display.setInputText(expression);
-        var result = evaluator.evaluate(expression);
-        if (result.isSuccess()) {
-            display.setResultText(result.getValue().get());
-        }
+        updateDisplay(expression);
     }
 
-    private void evaluate(Keypad.Key key)
+    private void inputCharacter(Keypad.Key key)
     {
-        String expression = formatter.inputCharacter(key.charValue());
+        var expression = formatter.inputCharacter(key.charValue());
+        updateDisplay(expression);
+    }
+
+    private void updateDisplay(String expression)
+    {
         display.setInputText(expression);
         var result = evaluator.evaluate(expression);
-        if (result.isSuccess()) {
-            display.setResultText(result.getValue().get());
-        }
+        // If value is present, then evaluation succeed. Only update on success.
+        result.getValue().ifPresent(value -> display.setResultText(value));
     }
 
     private void updateDisplay(Keypad.Key key)
@@ -127,17 +130,17 @@ public class TimeCalculatorController
                 delete();
                 break;
             default:
-                evaluate(key);
+                inputCharacter(key);
                 break;
         }
     }
 
-    private void updateDisplay(String character)
+    private void onKeyTyped(String character)
     {
         Keypad.Key.fromCharacter(character).ifPresent(this::updateDisplay);
     }
 
-    private void updateDisplay(KeyCode keyCode)
+    private void onKeyPressed(KeyCode keyCode)
     {
         Keypad.Key.fromKeyCode(keyCode).ifPresent(this::updateDisplay);
     }
