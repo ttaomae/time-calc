@@ -1,5 +1,6 @@
 package ttaomae.timecalc;
 
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
@@ -11,32 +12,49 @@ import ttaomae.timecalc.core.TimeCalcLoader;
 import ttaomae.timecalc.util.InteractiveModeTimeCalcCore;
 
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 public class TimeCalculatorController
 {
+    private static final Logger LOGGER =
+            Logger.getLogger(TimeCalculatorController.class.getCanonicalName());
+
     @FXML private VBox root;
     @FXML private Display display;
     @FXML private Keypad keypad;
 
     private final ExpressionFormatter formatter;
     private final ExpressionEvalutor evaluator;
+    private final ExecutorService evaluatorThreadPool;
 
-    public TimeCalculatorController()
+    public TimeCalculatorController() throws IOException
     {
         formatter = new ExpressionFormatter();
-        evaluator = new InteractiveModeTimeCalcCore(loadTimeCalcCore());
+        var temporaryDirectory = Files.createTempDirectory("time-calc-");
+        var timeCalcPath = loadTimeCalcCore(temporaryDirectory);
+        evaluator = new InteractiveModeTimeCalcCore(timeCalcPath);
+        evaluatorThreadPool = createEvaluatorThreadPool();
+
+        Runtime.getRuntime().addShutdownHook(newCleanupThread(
+                evaluator, evaluatorThreadPool, temporaryDirectory));
     }
 
-    private static Path loadTimeCalcCore()
+    /**
+     * Loads the time-calc/core executable into the specified directory.
+     */
+    private static Path loadTimeCalcCore(Path outputDirectory)
     {
         try (var executableStream = TimeCalcLoader.getExecutableAsStream()) {
-            var tempDir = Files.createTempDirectory("time-calc-");
-            tempDir.toFile().deleteOnExit();
-
-            var timeCalcPath = tempDir.resolve(TimeCalcLoader.getExecutableName());
+            var timeCalcPath = outputDirectory.resolve(TimeCalcLoader.getExecutableName());
             Files.copy(executableStream, timeCalcPath);
 
             try {
@@ -112,9 +130,17 @@ public class TimeCalculatorController
     private void updateDisplay(String expression)
     {
         display.setInputText(expression);
-        var result = evaluator.evaluate(expression);
-        // If value is present, then evaluation succeed. Only update on success.
-        result.getValue().ifPresent(value -> display.setResultText(value));
+        evaluatorThreadPool.submit(() ->
+            // If value is present, then evaluation succeeded. Only update display on success.
+            evaluator.evaluate(expression).getValue().ifPresent(this::setResult));
+    }
+
+    /**
+     * Sets the display's result text to the specified value. Runs on the JavaFX Application Thread.
+     */
+    private void setResult(String result)
+    {
+        Platform.runLater(() -> display.setResultText(result));
     }
 
     private void updateDisplay(Keypad.Key key)
@@ -143,5 +169,66 @@ public class TimeCalculatorController
     private void onKeyPressed(KeyCode keyCode)
     {
         Keypad.Key.fromKeyCode(keyCode).ifPresent(this::updateDisplay);
+    }
+
+    /**
+     * Creates a thread pool used to run tasks to evaluate expressions.
+     */
+    @SuppressWarnings("PMD.DoNotUseThreads")
+    private static ExecutorService createEvaluatorThreadPool()
+    {
+        return Executors.newSingleThreadExecutor(runnable -> {
+            Thread thread = new Thread(runnable);
+            thread.setDaemon(true);
+            thread.setName("time-calc-evaluate");
+            return thread;
+        });
+    }
+
+    @SuppressWarnings("PMD.DoNotUseThreads")
+    private static Thread newCleanupThread(ExpressionEvalutor evaluator,
+            ExecutorService evaluatorThreadPool, Path temporaryDirectory)
+    {
+        return new Thread(() -> {
+            LOGGER.warning("Cleaning up.");
+            if (evaluator instanceof InteractiveModeTimeCalcCore) {
+                ((InteractiveModeTimeCalcCore) evaluator).shutDown();
+            }
+
+            evaluatorThreadPool.shutdown();
+            try {
+                evaluatorThreadPool.awaitTermination(1, TimeUnit.SECONDS);
+            }
+            catch (InterruptedException ignored) {
+                LOGGER.warning("Interrupted while waiting for evaluator thread to terminate.");
+            }
+
+            try {
+                recursiveDelete(temporaryDirectory);
+            }
+            catch (IOException e) {
+                LOGGER.warning(() -> "Could not delete temporary directory: " + temporaryDirectory);
+            }
+        });
+    }
+
+    /**
+     * Recursively deletes a directory.
+     */
+    private static void recursiveDelete(Path directory) throws IOException
+    {
+        Files.walkFileTree(directory, new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                Files.delete(file);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, IOException e) throws IOException {
+                Files.delete(dir);
+                return FileVisitResult.CONTINUE;
+            }
+        });
     }
 }

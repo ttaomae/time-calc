@@ -12,7 +12,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
@@ -20,15 +23,13 @@ import java.util.logging.Logger;
  * Expressions, terminated by line separators, are written to the stdin of the process. A result or
  * error is then written the process
  */
-@SuppressWarnings("PMD.DoNotUseThreads")
 public final class InteractiveModeTimeCalcCore implements ExpressionEvalutor
 {
     private static final Logger LOGGER =
             Logger.getLogger(InteractiveModeTimeCalcCore.class.getCanonicalName());
     /** Writes to the stdin of the time-calc process. */
     private final OutputStreamWriter timeCalcStdin;
-    private final Thread stdoutThread;
-    private final Thread stderrThread;
+    private final Process timeCalcProcess;
 
     private final BlockingQueue<Result<String, String>> resultQueue;
 
@@ -42,31 +43,27 @@ public final class InteractiveModeTimeCalcCore implements ExpressionEvalutor
             throw new IllegalArgumentException("commandPath must refer to an existing file.");
         }
 
-        Process process;
         try {
             var command = commandPath.toAbsolutePath().toString();
-            process = new ProcessBuilder(command).start();
+            timeCalcProcess = new ProcessBuilder(command).start();
         }
         catch (IOException e) {
             throw new IllegalStateException("Could not start time-calc process.", e);
         }
 
-        timeCalcStdin = new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8);
+        timeCalcStdin = new OutputStreamWriter(timeCalcProcess.getOutputStream(), StandardCharsets.UTF_8);
         resultQueue = new SynchronousQueue<>();
 
         var timeCalcStdout = new BufferedReader(
-                new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
+                new InputStreamReader(timeCalcProcess.getInputStream(), StandardCharsets.UTF_8));
         var timeCalcStderr = new BufferedReader(
-                new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8));
+                new InputStreamReader(timeCalcProcess.getErrorStream(), StandardCharsets.UTF_8));
 
-        // Create and start threads which fill queue with results.
-        stdoutThread = newDaemonThread("time-calc-stdout",
+        ExecutorService standardStreamThreadPool = newStandardStreamThreadPool();
+        standardStreamThreadPool.submit(
                 () -> fillQueue(timeCalcStdout, StandardStream.STDOUT, resultQueue));
-        stderrThread = newDaemonThread("time-calc-stderr",
+        standardStreamThreadPool.submit(
                 () -> fillQueue(timeCalcStderr, StandardStream.STDERR, resultQueue));
-
-        stdoutThread.start();
-        stderrThread.start();
     }
 
     @Override
@@ -104,17 +101,18 @@ public final class InteractiveModeTimeCalcCore implements ExpressionEvalutor
     /**
      * Terminates time-calc interactive mode and stops threads reading from stdout/stderr.
      */
-    private void shutDown() {
+    public void shutDown() {
         try {
             // Close stream into stdin, which should end the process.
             timeCalcStdin.close();
+            timeCalcProcess.waitFor();
         }
         catch (IOException e) {
-            LOGGER.warning(() -> "Could not close stdin stream.");
+            LOGGER.warning("Could not close stdin stream.");
         }
-        // Terminate threads reading from stdout/stderr.
-        stdoutThread.interrupt();
-        stderrThread.interrupt();
+        catch (InterruptedException e) {
+            LOGGER.warning("Interruped while waiting for time-calc process to complete.");
+        }
     }
 
     private enum StandardStream { STDOUT, STDERR }
@@ -141,10 +139,17 @@ public final class InteractiveModeTimeCalcCore implements ExpressionEvalutor
         }
     }
 
-    private static Thread newDaemonThread(String name, Runnable r) {
-        Thread t = new Thread(r);
-        t.setName(name);
-        t.setDaemon(true);
-        return t;
+    /**
+     * Creates a new thread pool for theads reading from the time-calc standard output streams
+     * (stdout and stderr).
+     */
+    @SuppressWarnings("PMD.DoNotUseThreads")
+    private static ExecutorService newStandardStreamThreadPool() {
+        return Executors.newFixedThreadPool(2, runnable -> {
+            Thread thread = new Thread(runnable);
+            thread.setDaemon(true);
+            thread.setName("time-calc-reader");
+            return thread;
+        });
     }
 }
