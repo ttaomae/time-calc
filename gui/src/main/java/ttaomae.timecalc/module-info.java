@@ -9,5 +9,4 @@ module ttaomae.timecalc {
     requires javafx.base;
     requires javafx.controls;
     requires javafx.fxml;
-    requires com.github.spotbugs.annotations;
 }

@@ -8,4 +8,12 @@
          https://github.com/spotbugs/spotbugs/issues/756 -->
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE" />
   </Match>
+  <Match>
+    <!-- Disable OS_OPEN_STREAM for InteractiveModeTimeCalcCore constructor.
+         This appears to be a false positive. stdout/stderr streams are closed
+         implicitly by try-with-resources in fillQueue method. -->
+    <Class name="ttaomae.timecalc.util.InteractiveModeTimeCalcCore" />
+    <Method name="&lt;init&gt;" params="java.nio.file.Path" />
+    <Bug pattern="OS_OPEN_STREAM" />
+  </Match>
 </FindBugsFilter>

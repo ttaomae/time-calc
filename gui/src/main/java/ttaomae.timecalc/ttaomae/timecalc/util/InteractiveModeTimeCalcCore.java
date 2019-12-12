@@ -1,7 +1,5 @@
 package ttaomae.timecalc.util;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -15,7 +13,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
@@ -33,9 +30,6 @@ public final class InteractiveModeTimeCalcCore implements ExpressionEvalutor
 
     private final BlockingQueue<Result<String, String>> resultQueue;
 
-    @SuppressFBWarnings(value = "OS_OPEN_STREAM",
-            justification = "This appears to be a false positive. stdout/stderr streams are closed "
-                    + "implicitly by try-with-resources in fillQueue method.")
     public InteractiveModeTimeCalcCore(Path commandPath)
     {
         Objects.requireNonNull(commandPath, "commandPath must not be null.");

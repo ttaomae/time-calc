@@ -46,11 +46,6 @@
       <artifactId>javafx-graphics</artifactId>
       <version>${javafx.version}</version>
     </dependency>
-    <dependency>
-      <groupId>com.github.spotbugs</groupId>
-      <artifactId>spotbugs-annotations</artifactId>
-      <version>${spotbugs-annotations.version}</version>
-    </dependency>
 
     <dependency>
       <groupId>org.junit.jupiter</groupId>
